@@ -6,16 +6,30 @@
     "main"
   ],
   "permissions": [
-    "core:default",
     "fs:default",
+    "dialog:default",
+    "fs:allow-open",
+    "fs:read-files",
+    "fs:read-all",
+    "fs:allow-read",
+    "dialog:allow-open",
+    "dialog:allow-save",
     {
-      "identifier": "fs:allow-all",
+      "identifier": "fs:scope",
       "allow": [
+        {
+          "path": "$HOME/**"
+        },
+        {
+          "path": "$DOCUMENT/**"
+        },
+        {
+          "path": "$DOWNLOAD/**"
+        },
         {
           "path": "**"
         }
       ]
     }
-  ],
-  "capabilities": []
+  ]
 }

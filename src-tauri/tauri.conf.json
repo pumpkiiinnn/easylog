@@ -16,11 +16,13 @@
         "height": 600,
         "resizable": true,
         "title": "EasyLog",
-        "width": 800
+        "width": 800,
+        "dragDropEnabled": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": ["default"]
     }
   },
   "bundle": {
@@ -36,7 +38,6 @@
   },
   "plugins": {
     "fs": {
-      "requireLiteralLeadingDot": false
     }
   }
 }

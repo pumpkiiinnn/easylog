@@ -19,7 +19,8 @@ export default function LogContent() {
       console.log('Tauri environment detected');
       logFiles = (files as string[]).filter(file => 
         file.toLowerCase().endsWith('.log') || 
-        file.toLowerCase().endsWith('.txt')
+        file.toLowerCase().endsWith('.txt') ||
+        file.toLowerCase().endsWith('.json')
       );
       console.log('Filtered log files:', logFiles);
       if (logFiles.length > 0) {
@@ -29,7 +30,8 @@ export default function LogContent() {
       // 网页环境
       logFiles = (files as File[]).filter(file => 
         file.name.toLowerCase().endsWith('.log') || 
-        file.name.toLowerCase().endsWith('.txt')
+        file.name.toLowerCase().endsWith('.txt') ||
+        file.name.toLowerCase().endsWith('.json')
       );
       if (logFiles.length > 0) {
         await readFile({ path: URL.createObjectURL(logFiles[0]) });
@@ -40,7 +42,7 @@ export default function LogContent() {
       console.log('No valid files found');
       notifications.show({
         title: '无效的文件类型',
-        message: '请拖入 .log 或 .txt 文件',
+        message: '请拖入 .log、.txt 或 .json 文件',
         color: 'red'
       });
     }
@@ -56,28 +58,26 @@ export default function LogContent() {
 
     const setupTauriEvents = async () => {
       try {
-        // 使用 onDragDropEvent 监听拖放事件
         const unlisten = await getCurrentWebview().onDragDropEvent((event) => {
           console.log('Drag event:', event.payload.type);
           
           switch(event.payload.type) {
             case 'drop':
-              // 文件被拖放时
               console.log('Dropped files:', event.payload.paths);
+              updateDragState(false);
               handleFiles(event.payload.paths);
               break;
             case 'over':
-              // 文件悬停时
               console.log('File hovering at:', event.payload.position);
+              updateDragState(true);
               break;
             case 'leave':
-              // 文件拖离时
               console.log('File drag cancelled');
+              updateDragState(false);
               break;
           }
         });
 
-        // 清理函数
         return () => {
           unlisten();
         };

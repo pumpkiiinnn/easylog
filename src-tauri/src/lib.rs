@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
+use log::{error, warn, info, debug, trace};
 
 #[derive(Debug, Serialize)]
 struct FileContent {
@@ -22,6 +23,7 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn read_file(options: FileReadOptions) -> Result<FileContent, String> {
+    info!("Reading file: {:?}", options);
     let file = File::open(&options.path).map_err(|e| e.to_string())?;
     let reader = BufReader::new(file);
     let mut content = String::new();
@@ -62,6 +64,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![greet, read_file])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
