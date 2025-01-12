@@ -6,6 +6,7 @@ import FileList from './components/FileList';
 import LogContent from './components/LogContent';
 import SettingsPanel from './components/SettingsPanel';
 import { Notifications } from '@mantine/notifications';
+import BottomMenu from './components/BottomMenu';
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -70,6 +71,13 @@ function App() {
         }}>
           <SettingsPanel />
         </AppShell.Aside>
+
+        <BottomMenu
+          fileFormat="LOG"
+          fileSize="2.5MB"
+          lineCount={1000}
+          encoding="UTF-8"
+        />
       </AppShell>
     </MantineProvider>
   );

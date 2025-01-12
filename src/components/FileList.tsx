@@ -45,7 +45,7 @@ export default function FileList() {
 
   return (
     <Stack h="100%" spacing={0}>
-      <Box p="xs">
+      <Box>
         <TextInput
           placeholder="搜索文件..."
           leftSection={<IconSearch size={16} />}
@@ -61,7 +61,7 @@ export default function FileList() {
           }}
         />
         
-        <Stack spacing="xs">
+        <Stack>
           <Button 
             variant="light" 
             leftSection={<IconFileImport size={16} />}
@@ -92,7 +92,7 @@ export default function FileList() {
       </Box>
       
       <ScrollArea.Autosize mah={600} type="hover">
-        <Stack spacing={0}>
+        <Stack>
           {['app.log', 'error.log', 'access.log', 'debug.log'].map((file) => (
             <Button
               key={file}
