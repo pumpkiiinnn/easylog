@@ -42,12 +42,16 @@ function App() {
   const [navbarCollapsed, setNavbarCollapsed] = useState(false);
   
   const toolbarWidth = 48; // 工具栏宽度
-  const fileNavWidth = navbarCollapsed ? 50 : 260; // 文件导航栏宽度
+  const fileNavWidth = navbarCollapsed ? 0 : 260; // 文件导航栏宽度
   const settingsWidth = 280; // 右侧设置面板宽度
 
   const toolbarItems = [
     { icon: IconPlugConnected, tooltip: '插件' },
-    { icon: IconFolderOpen, tooltip: '资源管理器' },
+    { 
+      icon: IconFolderOpen, 
+      tooltip: navbarCollapsed ? '展开资源管理器' : '收起资源管理器',
+      onClick: () => setNavbarCollapsed(!navbarCollapsed)
+    },
     { icon: IconSearch, tooltip: '搜索' },
     { icon: IconBug, tooltip: '调试' },
   ];
@@ -84,6 +88,7 @@ function App() {
                 variant="subtle"
                 color="gray.7"
                 size="lg"
+                onClick={item.onClick}
                 styles={{
                   root: {
                     '&:hover': {
@@ -101,29 +106,13 @@ function App() {
         {/* 文件导航区域 */}
         <div style={{
           width: fileNavWidth,
-          borderRight: '1px solid #e9ecef',
+          borderRight: navbarCollapsed ? 'none' : '1px solid #e9ecef',
           backgroundColor: '#fff',
-          transition: 'width 0.3s ease',
+          transition: 'all 0.3s ease',
           overflow: 'hidden',
           position: 'relative',
           flexShrink: 0,
         }}>
-          <ActionIcon
-            variant="subtle"
-            size="md"
-            style={{
-              position: 'absolute',
-              right: navbarCollapsed ? 12 : -16,
-              top: 20,
-              zIndex: 10,
-              backgroundColor: '#fff',
-              border: '1px solid #e9ecef',
-              borderRadius: '50%'
-            }}
-            onClick={() => setNavbarCollapsed(!navbarCollapsed)}
-          >
-            {navbarCollapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
-          </ActionIcon>
           <div style={{
             opacity: navbarCollapsed ? 0 : 1,
             transition: 'opacity 0.3s ease',
