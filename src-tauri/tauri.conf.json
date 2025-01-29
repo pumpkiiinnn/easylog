@@ -17,7 +17,7 @@
         "resizable": true,
         "title": "EasyLog",
         "width": 800,
-        "dragDropEnabled": true
+        "dragDropEnabled": false
       }
     ],
     "security": {
