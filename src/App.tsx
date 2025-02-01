@@ -1,11 +1,9 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import { MantineProvider, createTheme } from '@mantine/core';
-import { AppShell, ActionIcon, Tooltip, Stack } from '@mantine/core';
+import { ActionIcon, Tooltip, Stack } from '@mantine/core';
 import { 
-  IconChevronLeft, 
-  IconChevronRight, 
-  IconPlugConnected, 
+  IconPlugConnected,
   IconFolderOpen, 
   IconSearch, 
   IconBug,
@@ -26,7 +24,7 @@ const theme = createTheme({
   fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
   components: {
     AppShell: {
-      styles: (theme) => ({
+      styles: (theme: any) => ({
         main: {
           backgroundColor: theme.colorScheme === 'dark' ? theme.colors.dark[8] : '#f8f9fa',
         },
@@ -70,55 +68,6 @@ function App() {
         height: '100vh',
         overflow: 'hidden'
       }}>
-        {/* 顶部栏 */}
-        <div style={{
-          height: headerHeight,
-          borderBottom: '1px solid #e9ecef',
-          backgroundColor: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-        }}>
-          {/* 左侧 Logo 或标题 */}
-          <div style={{ 
-            fontWeight: 500,
-            fontSize: '16px',
-            color: '#228be6'
-          }}>
-            Log Viewer
-          </div>
-
-          {/* 右侧工具栏 */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <Tooltip label="通知" position="bottom">
-              <ActionIcon variant="subtle" color="gray.7" size="lg">
-                <IconBell size={20} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="设置" position="bottom">
-              <ActionIcon variant="subtle" color="gray.7" size="lg">
-                <IconSettings size={20} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="用户" position="bottom">
-              <ActionIcon variant="subtle" color="gray.7" size="lg">
-                <IconUser size={20} />
-              </ActionIcon>
-            </Tooltip>
-            <Tooltip label="菜单" position="bottom">
-              <ActionIcon variant="subtle" color="gray.7" size="lg">
-                <IconMenu2 size={20} />
-              </ActionIcon>
-            </Tooltip>
-          </div>
-        </div>
-
         {/* 主要内容区域 */}
         <div style={{ 
           display: 'flex', 
