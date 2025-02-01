@@ -1,0 +1,33 @@
+<body>
+  <!-- 自定义顶部栏 -->
+  <header class="topbar">
+      <div class="left">
+          <!-- 自定义按钮区域 -->
+          <button id="user">用户</button>
+          <button id="settings">设置</button>
+          <button id="notifications">通知</button>
+      </div>
+      <div class="right">
+          <!-- 系统窗口控制按钮 -->
+          <button id="minimize" onclick="handleMinimize()">缩小</button>
+          <button id="fullscreen" onclick="handleFullscreen()">全屏</button>
+          <button id="close" onclick="handleClose()">关闭</button>
+      </div>
+  </header>
+  
+  <script>
+      // 以下函数需要结合 Tauri 2 的 API 进行调用，根据具体 API 进行修改
+      function handleMinimize() {
+          // 使用Tauri的 API 调用 window.minimize()，例如：
+          // window.__TAURI__.window.getCurrent().minimize();
+      }
+      function handleFullscreen() {
+          // 切换全屏状态：
+          // window.__TAURI__.window.getCurrent().toggleMaximize();
+      }
+      function handleClose() {
+          // 关闭窗口：
+          // window.__TAURI__.window.getCurrent().close();
+      }
+  </script>
+</body> 

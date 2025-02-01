@@ -1,0 +1,25 @@
+/* ... 其他样式 ... */
+
+/* 顶部栏样式 */
+.topbar {
+    display: flex;
+    justify-content: space-between; /* 左右分离 */
+    align-items: center;            /* 垂直居中 */
+    height: 40px;                   /* 可根据需要调整高度 */
+    padding: 0 10px;                /* 添加左右内边距 */
+    background-color: #f5f5f5;      /* 设置背景色 */
+    -webkit-app-region: drag;       /* 使整个区域可拖动（需与 Tauri 设置配合） */
+}
+
+/* 避免子元素被拖动处理影响 */
+.topbar button {
+    -webkit-app-region: no-drag;    /* 按钮区域禁止拖动，避免点击异常 */
+    margin-right: 5px;              /* 可选：在按钮间加一点间距 */
+}
+
+/* 确保右侧控制按钮之间有间隔 */
+.topbar .right button:last-child {
+    margin-right: 0;
+}
+
+/* ... 其他样式 ... */ 
