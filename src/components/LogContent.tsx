@@ -12,6 +12,7 @@ import { LogEntry } from '../types/log';
 import { highlightText } from '../utils/textHighlight';
 import SearchNavigation from './SearchNavigation';
 import { useViewportSize } from '@mantine/hooks';
+import TextSelectionPopover from './TextSelectionPopover';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
@@ -211,6 +212,14 @@ export default function LogContent() {
     );
   };
 
+  const handleAIInteraction = (text: string) => {
+    // 这里处理与 AI 的交互
+    console.log('AI交互:', {
+      selectedText: text,
+      // 后续可以添加更多上下文信息
+    });
+  };
+
   if (!currentFile && !storeContent) {
     return (
       <Stack h="100%" gap={0}>
@@ -347,6 +356,8 @@ export default function LogContent() {
           </ScrollArea>
         )}
       </Box>
+
+      <TextSelectionPopover onSubmit={handleAIInteraction} />
     </Stack>
   );
 } 
