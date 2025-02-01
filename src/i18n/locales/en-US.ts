@@ -116,15 +116,21 @@ export default {
     fontSize: 'Font Size',
     lineHeight: 'Line Height',
     language: {
-      title: 'Language',
+      title: 'Interface Language',
       current: 'Current Language',
+      selectLanguage: 'Select language',
     },
     subscription: {
       title: 'Subscription',
       upgrade: 'Upgrade',
+      free: 'Free',
+      pro: 'Pro',
+      enterprise: 'Enterprise',
+      details: 'Manage subscription',
     },
     aiModel: {
       title: 'AI Model',
+      current: 'Current Model',
     },
     logColors: {
       error: 'Error Color',
@@ -132,7 +138,41 @@ export default {
       info: 'Info Color',
       debug: 'Debug Color',
       trace: 'Trace Color'
-    }
+    },
+    auth: {
+      login: 'Login',
+      logout: 'Logout',
+      manage: 'Manage Account',
+      profile: 'Profile',
+      billing: 'Billing',
+    },
+    apiUsage: {
+      title: 'API Usage',
+      remaining: 'Remaining',
+    },
+    customModel: {
+      title: 'Custom Models',
+      provider: 'Provider',
+      selectProvider: 'Select provider',
+      apiKey: 'API Key',
+      enterApiKey: 'Enter API key',
+      modelType: 'Model Type',
+      selectModel: 'Select model',
+    },
+    basic: {
+      title: 'Basic Settings',
+      autoSave: 'Auto Save',
+      autoSaveDescription: 'Automatically save chat history and settings',
+      telemetry: 'Usage Data Collection',
+      telemetryDescription: 'Help us improve (excludes conversation content)',
+    },
+    aiStyles: {
+      title: 'AI Conversation Style',
+      professional: 'Professional',
+      friendly: 'Friendly',
+      creative: 'Creative',
+      concise: 'Concise',
+    },
   },
   bottomMenu: {
     format: 'Format',

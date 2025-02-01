@@ -116,8 +116,9 @@ export default {
     fontSize: '字体大小',
     lineHeight: '行高',
     language: {
-      title: '语言',
+      title: '界面语言',
       current: '当前语言',
+      selectLanguage: '选择语言',
     },
     subscription: {
       title: '订阅计划',
@@ -132,7 +133,50 @@ export default {
       info: '信息颜色',
       debug: '调试颜色',
       trace: '追踪颜色'
-    }
+    },
+    auth: {
+      login: '登录',
+      logout: '退出登录',
+      manage: '管理账户',
+      profile: '个人资料',
+      billing: '账单信息',
+    },
+    subscription: {
+      free: '免费版',
+      pro: '专业版',
+      enterprise: '企业版',
+      details: '管理订阅计划',
+    },
+    apiUsage: {
+      title: 'API 使用量',
+      remaining: '剩余额度',
+    },
+    customModel: {
+      title: '自定义模型',
+      provider: '模型提供商',
+      selectProvider: '选择提供商',
+      apiKey: 'API 密钥',
+      enterApiKey: '输入 API 密钥',
+      modelType: '模型类型',
+      selectModel: '选择模型',
+    },
+    basic: {
+      title: '基础设置',
+      autoSave: '自动保存',
+      autoSaveDescription: '自动保存对话历史和设置',
+      telemetry: '使用数据收集',
+      telemetryDescription: '帮助我们改进产品（不包含对话内容）',
+    },
+    aiStyles: {
+      title: 'AI 对话风格',
+      professional: '专业',
+      friendly: '友好',
+      creative: '创意',
+      concise: '简洁',
+    },
+    aiModel: {
+      current: '当前模型',
+    },
   },
   bottomMenu: {
     format: '格式',
