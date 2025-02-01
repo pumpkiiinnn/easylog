@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Popover, ActionIcon, TextInput, Stack, Text, Box, Portal } from '@mantine/core';
 import { IconMessageCircle, IconSend } from '@tabler/icons-react';
 import { useClickOutside } from '@mantine/hooks';
+import { useThemeStore } from '../stores/themeStore';
 
 interface TextSelectionPopoverProps {
   onSubmit: (text: string) => void;
@@ -13,6 +14,7 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
   const [selectedText, setSelectedText] = useState('');
   const [inputText, setInputText] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const { isDark } = useThemeStore();
   
   const popoverRef = useClickOutside(() => {
     if (!isPopoverOpen) {
@@ -102,6 +104,8 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
           styles={{
             dropdown: {
               padding: '1rem',
+              backgroundColor: isDark ? '#25262B' : '#fff',
+              border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
             },
           }}
         >
@@ -135,7 +139,7 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
               <Box
                 p="xs"
                 style={{
-                  backgroundColor: '#f1f3f5',
+                  backgroundColor: isDark ? '#1A1B1E' : '#f1f3f5',
                   borderRadius: 4,
                   maxHeight: 100,
                   overflow: 'auto'
@@ -166,6 +170,12 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
                   }
                 }}
                 autoFocus
+                styles={{
+                  input: {
+                    backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa',
+                    border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
+                  }
+                }}
               />
             </Stack>
           </Popover.Dropdown>

@@ -1,6 +1,6 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import { MantineProvider, createTheme } from '@mantine/core';
+import { MantineProvider, createTheme, AppShell } from '@mantine/core';
 import { ActionIcon, Tooltip, Stack } from '@mantine/core';
 import { 
   IconPlugConnected,
@@ -18,6 +18,7 @@ import SettingsPanel from './components/SettingsPanel';
 import { Notifications } from '@mantine/notifications';
 import BottomMenu from './components/BottomMenu';
 import { useState } from 'react';
+import { useThemeStore } from './stores/themeStore';
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -42,6 +43,7 @@ const theme = createTheme({
 
 function App() {
   const [navbarCollapsed, setNavbarCollapsed] = useState(false);
+  const { isDark } = useThemeStore();
   
   const toolbarWidth = 48; // 工具栏宽度
   const fileNavWidth = navbarCollapsed ? 0 : 260; // 文件导航栏宽度
@@ -59,16 +61,32 @@ function App() {
     { icon: IconBug, tooltip: '调试' },
   ];
 
+  // 定义深色和浅色主题的颜色
+  const colors = {
+    background: isDark ? '#1A1B1E' : '#f8f9fa',
+    surface: isDark ? '#25262B' : '#fff',
+    border: isDark ? '#2C2E33' : '#e9ecef',
+    text: isDark ? '#C1C2C5' : '#495057',
+    textDimmed: isDark ? '#909296' : '#868e96',
+    hover: isDark ? '#2C2E33' : '#f1f3f5',
+  };
+
   return (
-    <MantineProvider theme={theme} withGlobalStyles withNormalizeCSS>
-      <Notifications position="top-right" />
+    <MantineProvider
+      theme={{
+        colorScheme: isDark ? 'dark' : 'light',
+      }}
+      withNormalizeCSS
+    >
+      <Notifications />
       <div style={{ 
         display: 'flex',
         flexDirection: 'column',
         height: '100vh',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        backgroundColor: colors.background,
+        color: colors.text,
       }}>
-        {/* 主要内容区域 */}
         <div style={{ 
           display: 'flex', 
           flex: 1,
@@ -78,12 +96,12 @@ function App() {
           <Stack 
             style={{
               width: toolbarWidth,
-              backgroundColor: '#fff',
+              backgroundColor: colors.surface,
               height: '100%',
               padding: '8px 0',
               alignItems: 'center',
               flexShrink: 0,
-              borderRight: '1px solid #e9ecef',
+              borderRight: `1px solid ${colors.border}`,
             }}
             gap={8}
           >
@@ -96,13 +114,13 @@ function App() {
               >
                 <ActionIcon
                   variant="subtle"
-                  color="gray.7"
+                  color={isDark ? 'gray.4' : 'gray.7'}
                   size="lg"
                   onClick={item.onClick}
                   styles={{
                     root: {
                       '&:hover': {
-                        backgroundColor: '#f1f3f5',
+                        backgroundColor: colors.hover,
                       }
                     }
                   }}
@@ -116,8 +134,8 @@ function App() {
           {/* 文件导航区域 */}
           <div style={{
             width: fileNavWidth,
-            borderRight: navbarCollapsed ? 'none' : '1px solid #e9ecef',
-            backgroundColor: '#fff',
+            borderRight: navbarCollapsed ? 'none' : `1px solid ${colors.border}`,
+            backgroundColor: colors.surface,
             transition: 'all 0.3s ease',
             overflow: 'hidden',
             position: 'relative',
@@ -138,7 +156,7 @@ function App() {
           <div style={{
             flex: 1,
             overflow: 'auto',
-            backgroundColor: '#f8f9fa',
+            backgroundColor: colors.background,
             position: 'relative',
           }}>
             <LogContent />
@@ -153,7 +171,9 @@ function App() {
                 left: toolbarWidth + fileNavWidth,
                 right: settingsWidth,
                 transition: 'left 0.3s ease',
-                zIndex: 101
+                zIndex: 101,
+                backgroundColor: colors.surface,
+                borderTop: `1px solid ${colors.border}`,
               }}
             />
           </div>
@@ -161,8 +181,8 @@ function App() {
           {/* 右侧设置面板 */}
           <div style={{
             width: settingsWidth,
-            borderLeft: '1px solid #e9ecef',
-            backgroundColor: '#fff',
+            borderLeft: `1px solid ${colors.border}`,
+            backgroundColor: colors.surface,
             overflow: 'auto',
             padding: '12px',
             flexShrink: 0,

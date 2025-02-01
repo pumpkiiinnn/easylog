@@ -13,6 +13,7 @@ import { highlightText } from '../utils/textHighlight';
 import SearchNavigation from './SearchNavigation';
 import { useViewportSize } from '@mantine/hooks';
 import TextSelectionPopover from './TextSelectionPopover';
+import { useThemeStore } from '../stores/themeStore';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
@@ -24,6 +25,7 @@ export default function LogContent() {
   const [searchMatches, setSearchMatches] = useState<number[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { height } = useViewportSize();
+  const { isDark } = useThemeStore();
 
   // 添加 useEffect 来监控 store 内容变化
   useEffect(() => {
@@ -277,11 +279,15 @@ export default function LogContent() {
   }
 
   return (
-    <Stack h="100%" gap={0} style={{ backgroundColor: '#f8f9fa' }}>
+    <Stack h="100%" gap={0} style={{ 
+      backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa' 
+    }}>
       <Box p="md" style={{ 
-        borderBottom: '1px solid #e9ecef',
-        backgroundColor: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        borderBottom: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
+        backgroundColor: isDark ? '#25262B' : '#fff',
+        boxShadow: isDark 
+          ? '0 1px 3px rgba(0,0,0,0.15)' 
+          : '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <Group justify="space-between" mb="md">
           <Text size="sm" fw={600} c="dimmed">{currentFileName}</Text>
@@ -313,8 +319,8 @@ export default function LogContent() {
             leftSection={<IconSearch size={16} />}
             styles={{
               input: {
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #e9ecef',
+                backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa',
+                border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
                 '&:focus': {
                   borderColor: '#228be6',
                   boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
@@ -333,10 +339,10 @@ export default function LogContent() {
 
       <Box style={{ 
         flex: 1, 
-        backgroundColor: '#fff',
+        backgroundColor: isDark ? '#25262B' : '#fff',
         margin: '12px',
         borderRadius: '8px',
-        border: '1px solid #e9ecef',
+        border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
         overflow: 'hidden'
       }}>
         {isLoading ? (
@@ -345,7 +351,7 @@ export default function LogContent() {
           </Center>
         ) : (
           <ScrollArea 
-            h={height - 200} 
+            h={height - 150}
             type="auto"
             viewportRef={scrollAreaRef}
             scrollbarSize={8}

@@ -15,6 +15,7 @@ import {useFileHandler} from '../hooks/useFileHandler';
 import {isTauri} from '../utils/environment';
 import {invoke} from '@tauri-apps/api/core';
 import {useLogContentStore} from '../stores/logContentStore';
+import { useThemeStore } from '../stores/themeStore';
 
 // 文件类型图标映射
 const fileTypeIcons: { [key: string]: any } = {
@@ -51,6 +52,16 @@ const logToBackend = async (level: string, message: string) => {
 export default function FileList() {
     const {readFile} = useFileHandler();
     const {setLogContent, setCurrentFileName} = useLogContentStore();
+    const { isDark } = useThemeStore();
+
+    const colors = {
+        inputBg: isDark ? '#1A1B1E' : '#f8f9fa',
+        buttonBg: isDark ? '#25262B' : '#fff',
+        buttonHoverBg: isDark ? '#2C2E33' : '#f1f3f5',
+        border: isDark ? '#2C2E33' : '#e9ecef',
+        text: isDark ? '#C1C2C5' : '#495057',
+        textDimmed: isDark ? '#909296' : '#868e96',
+    };
 
     const handleOpenFile = async () => {
         try {
@@ -116,17 +127,19 @@ export default function FileList() {
             <Box p="xs">
                 <TextInput
                     placeholder="搜索文件..."
-                    leftSection={<IconSearch size={16} color="#868E96"/>}
+                    leftSection={<IconSearch size={16} color={colors.textDimmed}/>}
                     mb="md"
                     styles={{
                         input: {
-                            backgroundColor: '#f8f9fa',
-                            border: '1px solid #e9ecef',
-                            borderRadius: '6px',
-                            fontSize: '14px',
+                            backgroundColor: colors.inputBg,
+                            border: `1px solid ${colors.border}`,
+                            color: colors.text,
                             '&:focus': {
                                 borderColor: '#228be6',
                                 boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
+                            },
+                            '&::placeholder': {
+                                color: colors.textDimmed
                             }
                         }
                     }}
@@ -134,16 +147,17 @@ export default function FileList() {
 
                 <Stack spacing="xs">
                     <Button
-                        variant="light"
+                        variant="default"
                         leftSection={<IconFileImport size={18}/>}
                         fullWidth
                         onClick={handleOpenFile}
                         styles={{
                             root: {
-                                border: '1px solid #e9ecef',
-                                backgroundColor: '#fff',
+                                border: `1px solid ${colors.border}`,
+                                backgroundColor: colors.buttonBg,
+                                color: colors.text,
                                 '&:hover': {
-                                    backgroundColor: '#f8f9fa',
+                                    backgroundColor: colors.buttonHoverBg,
                                 }
                             }
                         }}
@@ -152,15 +166,16 @@ export default function FileList() {
                     </Button>
 
                     <Button
-                        variant="light"
+                        variant="default"
                         leftSection={<IconFolderOpen size={18}/>}
                         fullWidth
                         styles={{
                             root: {
-                                border: '1px solid #e9ecef',
-                                backgroundColor: '#fff',
+                                border: `1px solid ${colors.border}`,
+                                backgroundColor: colors.buttonBg,
+                                color: colors.text,
                                 '&:hover': {
-                                    backgroundColor: '#f8f9fa',
+                                    backgroundColor: colors.buttonHoverBg,
                                 }
                             }
                         }}
@@ -170,10 +185,10 @@ export default function FileList() {
                 </Stack>
             </Box>
 
-            <Divider/>
+            <Divider color={colors.border}/>
 
             <Box px="xs">
-                <Text size="sm" fw={500} color="dimmed" mb="xs" style={{display: 'flex', alignItems: 'center'}}>
+                <Text size="sm" fw={500} c={colors.textDimmed} mb="xs" style={{display: 'flex', alignItems: 'center'}}>
                     <IconClock size={16} style={{marginRight: 6}}/>
                     最近打开
                 </Text>
@@ -201,8 +216,9 @@ export default function FileList() {
                                         height: 36,
                                         padding: '0 12px',
                                         transition: 'all 0.2s',
+                                        color: colors.text,
                                         '&:hover': {
-                                            backgroundColor: '#f1f3f5',
+                                            backgroundColor: colors.buttonHoverBg,
                                             transform: 'translateX(4px)'
                                         }
                                     },
@@ -230,12 +246,13 @@ export default function FileList() {
                                             maxWidth: 'calc(100% - 70px)',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
+                                            whiteSpace: 'nowrap',
+                                            color: colors.text
                                         }}
                                     >
                                         {file.name}
                                     </Text>
-                                    <Text size="xs" c="dimmed" style={{
+                                    <Text size="xs" c={colors.textDimmed} style={{
                                         flexShrink: 0,
                                         marginLeft: 8,
                                         minWidth: '60px',
