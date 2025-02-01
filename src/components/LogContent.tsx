@@ -1,6 +1,6 @@
 import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput } from '@mantine/core';
 import { IconRefresh, IconDownload, IconFileImport, IconSearch } from '@tabler/icons-react';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useFileHandler } from '../hooks/useFileHandler';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
@@ -10,6 +10,8 @@ import { LogParser } from '../utils/logParser';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { LogEntry } from '../types/log';
 import { highlightText } from '../utils/textHighlight';
+import SearchNavigation from './SearchNavigation';
+import { useViewportSize } from '@mantine/hooks';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
@@ -17,6 +19,10 @@ export default function LogContent() {
   const { currentFileName, content: storeContent } = useLogContentStore();
   const { styles, fontSize, searchText, setSearchText } = useLogSettingsStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
+  const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
+  const [searchMatches, setSearchMatches] = useState<number[]>([]);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { height } = useViewportSize();
 
   // 添加 useEffect 来监控 store 内容变化
   useEffect(() => {
@@ -41,6 +47,51 @@ export default function LogContent() {
       setParsedLogs(logs);
     }
   }, [storeContent]);
+
+  // 计算搜索匹配项
+  useEffect(() => {
+    if (!searchText || !parsedLogs.length) {
+      setSearchMatches([]);
+      setCurrentSearchIndex(0);
+      return;
+    }
+
+    const matches: number[] = [];
+    parsedLogs.forEach((log, index) => {
+      if (log.rawContent.toLowerCase().includes(searchText.toLowerCase())) {
+        matches.push(index);
+      }
+    });
+    setSearchMatches(matches);
+    setCurrentSearchIndex(matches.length > 0 ? 0 : -1);
+  }, [searchText, parsedLogs]);
+
+  // 滚动到当前匹配项
+  const scrollToMatch = useCallback((index: number) => {
+    if (!scrollAreaRef.current || searchMatches.length === 0) return;
+    
+    const matchElement = scrollAreaRef.current.querySelector(
+      `[data-log-index="${searchMatches[index]}"]`
+    );
+    
+    if (matchElement) {
+      matchElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [searchMatches]);
+
+  // 导航到下一个匹配项
+  const navigateToNext = () => {
+    const nextIndex = (currentSearchIndex + 1) % searchMatches.length;
+    setCurrentSearchIndex(nextIndex);
+    scrollToMatch(nextIndex);
+  };
+
+  // 导航到上一个匹配项
+  const navigateToPrevious = () => {
+    const prevIndex = currentSearchIndex > 0 ? currentSearchIndex - 1 : searchMatches.length - 1;
+    setCurrentSearchIndex(prevIndex);
+    scrollToMatch(prevIndex);
+  };
 
   // 处理文件的通用函数
   const handleFiles = async (files: File[] | string[]) => {
@@ -122,27 +173,35 @@ export default function LogContent() {
   }, []);
 
   // 渲染单条日志
-  const renderLogEntry = (entry: LogEntry) => {
+  const renderLogEntry = (entry: LogEntry, index: number) => {
     const style = styles[entry.level];
     const segments = highlightText(entry.rawContent, searchText);
+    const isCurrentMatch = searchMatches[currentSearchIndex] === index;
     
     return (
       <Text
         key={`${entry.timestamp}-${entry.traceId}`}
+        data-log-index={index}
         style={{
           color: style.color,
           fontWeight: style.fontWeight,
           fontSize: `${fontSize}px`,
           lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
+          padding: '4px 8px',
+          borderRadius: 4,
+          backgroundColor: isCurrentMatch ? '#1a1b1e15' : 'transparent',
+          transition: 'background-color 0.2s ease',
         }}
       >
-        {segments.map((segment, index) => (
+        {segments.map((segment, idx) => (
           <span
-            key={index}
+            key={idx}
             style={{
               backgroundColor: segment.isHighlight ? '#fff3bf' : 'transparent',
               color: segment.isHighlight ? '#1a1b1e' : undefined,
+              padding: segment.isHighlight ? '0 2px' : undefined,
+              borderRadius: segment.isHighlight ? 2 : undefined,
             }}
           >
             {segment.text}
@@ -209,75 +268,80 @@ export default function LogContent() {
   }
 
   return (
-    <Stack h="100%" gap={0}>
-      <Box p="xs" style={{ 
+    <Stack h="100%" gap={0} style={{ backgroundColor: '#f8f9fa' }}>
+      <Box p="md" style={{ 
         borderBottom: '1px solid #e9ecef',
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
       }}>
-        <Group justify="space-between" mb="xs">
-          <Text size="sm" fw={500}>{currentFileName}</Text>
+        <Group justify="space-between" mb="md">
+          <Text size="sm" fw={600} c="dimmed">{currentFileName}</Text>
           <Group gap="xs">
             <Button 
-              variant="subtle" 
-              size="sm"
-              leftSection={<IconRefresh size={16} />}
+              variant="light" 
+              size="xs"
+              leftSection={<IconRefresh size={14} />}
               loading={isLoading}
               onClick={() => currentFile && readFile({ path: currentFile })}
-              styles={{
-                root: {
-                  color: '#228be6',
-                  '&:hover': {
-                    backgroundColor: '#e7f5ff',
-                  }
-                }
-              }}
             >
               刷新
             </Button>
             <Button 
-              variant="subtle" 
-              size="sm"
-              leftSection={<IconDownload size={16} />}
-              styles={{
-                root: {
-                  color: '#228be6',
-                  '&:hover': {
-                    backgroundColor: '#e7f5ff',
-                  }
-                }
-              }}
+              variant="light"
+              size="xs"
+              leftSection={<IconDownload size={14} />}
             >
               导出
             </Button>
           </Group>
         </Group>
         
-        <TextInput
-          placeholder="搜索日志内容..."
-          value={searchText}
-          onChange={(event) => setSearchText(event.currentTarget.value)}
-          leftSection={<IconSearch size={16} />}
-          styles={{
-            input: {
-              backgroundColor: '#f8f9fa',
-              border: '1px solid #e9ecef',
-              '&:focus': {
-                borderColor: '#228be6',
-                boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
+        <Box style={{ position: 'relative' }}>
+          <TextInput
+            placeholder="搜索日志内容..."
+            value={searchText}
+            onChange={(event) => setSearchText(event.currentTarget.value)}
+            leftSection={<IconSearch size={16} />}
+            styles={{
+              input: {
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                '&:focus': {
+                  borderColor: '#228be6',
+                  boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
+                }
               }
-            }
-          }}
-        />
+            }}
+          />
+          <SearchNavigation
+            totalMatches={searchMatches.length}
+            currentMatch={currentSearchIndex + 1}
+            onPrevious={navigateToPrevious}
+            onNext={navigateToNext}
+          />
+        </Box>
       </Box>
 
-      <Box style={{ flex: 1, backgroundColor: '#1e1e1e', padding: '12px' }}>
+      <Box style={{ 
+        flex: 1, 
+        backgroundColor: '#fff',
+        margin: '12px',
+        borderRadius: '8px',
+        border: '1px solid #e9ecef',
+        overflow: 'hidden'
+      }}>
         {isLoading ? (
           <Center h="100%">
             <Loader color="blue" />
           </Center>
         ) : (
-          <ScrollArea h="100%" type="auto">
-            <Stack gap="xs">
+          <ScrollArea 
+            h={height - 200} 
+            type="auto"
+            viewportRef={scrollAreaRef}
+            scrollbarSize={8}
+          >
+            <Stack gap={0} p="md">
               {parsedLogs.map(renderLogEntry)}
             </Stack>
           </ScrollArea>
