@@ -6,11 +6,40 @@ import { useFileHandler } from '../hooks/useFileHandler';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { isTauri } from '../utils/environment';
 import { useLogContentStore } from '../stores/logContentStore';
+import { LogParser } from '../utils/logParser';
+import { useLogSettingsStore } from '../stores/logSettingsStore';
+import { LogEntry } from '../types/log';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
-  const { isLoading, currentFile, content, readFile } = useFileHandler();
-  const { currentFileName } = useLogContentStore();
+  const { isLoading, currentFile, content: hookContent } = useFileHandler();
+  const { currentFileName, content: storeContent } = useLogContentStore();
+  const { styles, fontSize } = useLogSettingsStore();
+  const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
+
+  // 添加 useEffect 来监控 store 内容变化
+  useEffect(() => {
+    console.log('Store content updated:', {
+      contentLength: storeContent?.length || 0,
+      preview: storeContent?.substring(0, 100) || '',
+      currentFileName
+    });
+  }, [storeContent, currentFileName]);
+
+  // 检查 currentFile 是否存在
+  console.log('Current file state:', {
+    currentFile,
+    hasStoreContent: Boolean(storeContent),
+    isLoading
+  });
+
+  // 监听 storeContent 变化，解析日志
+  useEffect(() => {
+    if (storeContent) {
+      const logs = LogParser.parseLogContent(storeContent);
+      setParsedLogs(logs);
+    }
+  }, [storeContent]);
 
   // 处理文件的通用函数
   const handleFiles = async (files: File[] | string[]) => {
@@ -91,7 +120,27 @@ export default function LogContent() {
     setupTauriEvents();
   }, []);
 
-  if (!currentFile) {
+  // 渲染单条日志
+  const renderLogEntry = (entry: LogEntry) => {
+    const style = styles[entry.level];
+    
+    return (
+      <Text
+        key={`${entry.timestamp}-${entry.traceId}`}
+        style={{
+          color: style.color,
+          fontWeight: style.fontWeight,
+          fontSize: `${fontSize}px`,
+          lineHeight: 1.6,
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {entry.rawContent}
+      </Text>
+    );
+  };
+
+  if (!currentFile && !storeContent) {
     return (
       <Stack h="100%" gap={0}>
         <Center 
@@ -199,16 +248,9 @@ export default function LogContent() {
           </Center>
         ) : (
           <ScrollArea h="100%" type="auto">
-            <Text 
-              style={{ 
-                fontFamily: 'Menlo, Monaco, Consolas, monospace',
-                fontSize: '13px',
-                lineHeight: 1.6,
-              }} 
-              color="gray.3"
-            >
-              {content}
-            </Text>
+            <Stack gap="xs">
+              {parsedLogs.map(renderLogEntry)}
+            </Stack>
           </ScrollArea>
         )}
       </Box>

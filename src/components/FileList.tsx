@@ -91,9 +91,11 @@ export default function FileList() {
                     console.log('Read file result:', result);
 
                     if (result) {
-                        // 注意这里使用 file_name 而不是 fileName
                         const {content, file_name} = result;
+                        console.log('Setting content length:', content.length);
+                        console.log('Content preview:', content.substring(0, 100));
                         setLogContent(content);
+                        console.log('Store updated with content');
                         setCurrentFileName(file_name);
                         await logToBackend('info', `File opened successfully. File: ${file_name}`);
                     }
@@ -104,6 +106,7 @@ export default function FileList() {
             }
         } catch (error) {
             console.error('Error opening file:', error);
+            await logToBackend('error', `Failed to read file: ${error}`);
             // 这里可以添加错误提示UI
         }
     };
