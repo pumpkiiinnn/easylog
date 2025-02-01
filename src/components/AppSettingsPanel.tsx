@@ -1,6 +1,8 @@
-import { Stack, Text, Box, Avatar, Button, TextInput, Select, Paper, Group, Progress, Menu, UnstyledButton } from '@mantine/core';
+import { Stack, Text, Box, Avatar, Button, TextInput, Select, Paper, Group, Progress, Menu, UnstyledButton, Divider } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
-import { IconUser, IconCreditCard, IconRobot, IconLanguage, IconChevronDown } from '@tabler/icons-react';
+import { IconUser, IconCreditCard, IconRobot, IconLanguage, IconChevronDown, IconSettings2 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitch from './LanguageSwitch';
 
 interface User {
   name: string;
@@ -18,12 +20,13 @@ const user: User = {
 // AI 使用数据
 const aiUsage = {
   used: 2.5,
-  total: 5.0,
-  percentage: 50, // (2.5/5.0) * 100
+  total: 10,
+  unit: 'GB'
 };
 
 export default function AppSettingsPanel() {
   const { isDark } = useThemeStore();
+  const { t } = useTranslation();
 
   const colors = {
     border: isDark ? '#2C2E33' : '#e9ecef',
@@ -35,159 +38,80 @@ export default function AppSettingsPanel() {
   };
 
   return (
-    <Stack gap="lg">
-      {/* 账号设置 */}
-      <Paper 
-        p="xl" 
-        radius="md"
-        style={{
-          backgroundColor: colors.cardBg,
-          border: `1px solid ${colors.border}`,
-        }}
-      >
-        <Group justify="space-between" mb="md">
-          <Text size="sm" fw={500} c={colors.text}>
-            <IconUser size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            账号设置
-          </Text>
-        </Group>
-        
-        <Group>
-          <Avatar 
-            size={64}
-            src={user.avatar}
-            color="blue"
-            radius="xl"
-          >
-            {!user.avatar && <IconUser size={32} />}
-          </Avatar>
-          <div style={{ flex: 1 }}>
-            <Text size="lg" fw={500} c={colors.text}>{user.name}</Text>
-            {!user.isLoggedIn && (
-              <Button 
-                variant="light" 
-                size="sm" 
-                mt="xs"
-                onClick={() => {/* 处理登录 */}}
-              >
-                登录
-              </Button>
-            )}
-          </div>
-        </Group>
-      </Paper>
+    <Stack gap="md">
+      <Text fw={500} size="sm" c={colors.text}>
+        <IconSettings2 size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+        {t('nav.appSettings')}
+      </Text>
 
-      {/* AI 设置与余额 */}
-      <Paper 
-        p="xl"
-        radius="md"
-        style={{
-          backgroundColor: colors.cardBg,
-          border: `1px solid ${colors.border}`,
-        }}
-      >
-        <Group justify="space-between" mb="lg">
-          <Text size="sm" fw={500} c={colors.text}>
-            <IconRobot size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            AI 设置
-          </Text>
-          <Group gap="xs">
-            <IconCreditCard size={16} color={colors.text} />
-            <Text size="sm" c={colors.text}>余额: ${aiUsage.total - aiUsage.used}</Text>
-          </Group>
-        </Group>
-        
+      <Paper p="md" radius="md" style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
         <Stack gap="md">
+          {/* 用户信息 */}
+          <Group>
+            <Avatar size="lg" src={user.avatar} color="blue">
+              <IconUser size={24} />
+            </Avatar>
+            <Box>
+              <Text size="sm" fw={500}>{user.name}</Text>
+              <Text size="xs" c="dimmed">Free Plan</Text>
+            </Box>
+          </Group>
+
+          {/* AI 使用量 */}
           <Box>
-            <Text size="sm" c={colors.text} mb={4}>使用额度</Text>
-            <Progress 
-              value={aiUsage.percentage} 
-              size="xl"
-              radius="xl"
-              styles={{
-                root: { backgroundColor: colors.progressTrack },
-              }}
-            />
-            <Group justify="space-between" mt={4}>
-              <Text size="xs" c="dimmed">已使用: ${aiUsage.used}</Text>
-              <Text size="xs" c="dimmed">总额度: ${aiUsage.total}</Text>
+            <Group justify="space-between" mb={4}>
+              <Text size="sm" c={colors.text}>AI Usage</Text>
+              <Text size="sm" c="dimmed">{aiUsage.used}/{aiUsage.total} {aiUsage.unit}</Text>
             </Group>
+            <Progress 
+              value={(aiUsage.used / aiUsage.total) * 100} 
+              size="sm" 
+              color="blue"
+            />
           </Box>
 
-          <Select
-            label="AI 模型"
-            placeholder="选择 AI 模型"
-            data={[
-              { value: 'openai', label: 'OpenAI GPT-4' },
-              { value: 'anthropic', label: 'Anthropic Claude 3' },
-              { value: 'gemini', label: 'Google Gemini Pro' },
-            ]}
-            styles={{
-              label: { color: colors.text, marginBottom: 8 },
-              input: {
-                backgroundColor: colors.inputBg,
-                borderColor: colors.border,
-                color: colors.text,
-                height: 42,
-              },
-            }}
-          />
-          
-          <TextInput
-            label="API Token"
-            placeholder="输入 API Token"
-            styles={{
-              label: { color: colors.text, marginBottom: 8 },
-              input: {
-                backgroundColor: colors.inputBg,
-                borderColor: colors.border,
-                color: colors.text,
-                height: 42,
-              },
-            }}
-          />
+          <Divider />
+
+          {/* 语言设置 */}
+          <Box>
+            <Text size="sm" fw={500} mb="md" c={colors.text}>
+              <IconLanguage size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              {t('settings.language.title')}
+            </Text>
+            <Box px="xs">
+              <LanguageSwitch />
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* 其他设置 */}
+          <Group justify="space-between">
+            <Text size="sm" c={colors.text}>
+              <IconCreditCard size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              {t('settings.subscription.title')}
+            </Text>
+            <Button variant="light" size="xs">
+              {t('settings.subscription.upgrade')}
+            </Button>
+          </Group>
+
+          <Group justify="space-between">
+            <Text size="sm" c={colors.text}>
+              <IconRobot size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              {t('settings.aiModel.title')}
+            </Text>
+            <Select
+              size="xs"
+              w={120}
+              data={[
+                { value: 'gpt-4', label: 'GPT-4' },
+                { value: 'gpt-3.5', label: 'GPT-3.5' },
+              ]}
+              defaultValue="gpt-3.5"
+            />
+          </Group>
         </Stack>
-      </Paper>
-
-      {/* 语言设置 */}
-      <Paper 
-        p="xl"
-        radius="md"
-        style={{
-          backgroundColor: colors.cardBg,
-          border: `1px solid ${colors.border}`,
-        }}
-      >
-        <Group justify="space-between">
-          <Text size="sm" fw={500} c={colors.text}>
-            <IconLanguage size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            语言设置
-          </Text>
-          
-          <Menu shadow="md" width={200}>
-            <Menu.Target>
-              <UnstyledButton
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 4,
-                  backgroundColor: colors.inputBg,
-                  border: `1px solid ${colors.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <Text size="sm" c={colors.text}>简体中文</Text>
-                <IconChevronDown size={16} color={colors.text} />
-              </UnstyledButton>
-            </Menu.Target>
-
-            <Menu.Dropdown>
-              <Menu.Item>English</Menu.Item>
-              <Menu.Item>简体中文</Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Group>
       </Paper>
     </Stack>
   );

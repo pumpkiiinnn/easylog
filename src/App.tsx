@@ -1,5 +1,6 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import './i18n';
 import {MantineProvider, createTheme, AppShell, Stack, Tabs} from '@mantine/core';
 import {ActionIcon, Tooltip} from '@mantine/core';
 import {
@@ -21,12 +22,15 @@ import LogContent from './components/LogContent';
 import SettingsPanel from './components/SettingsPanel';
 import {Notifications} from '@mantine/notifications';
 import BottomMenu from './components/BottomMenu';
-import {useState} from 'react';
+import {useState, useEffect} from 'react';
 import {useThemeStore} from './stores/themeStore';
 import {useSidebarStore} from './stores/sidebarStore';
 import AppSettingsPanel from './components/AppSettingsPanel';
 import ChatHistoryPanel from './components/ChatHistoryPanel';
 import RemoteLogsPanel from './components/RemoteLogsPanel';
+import LanguageSwitch from './components/LanguageSwitch';
+import { useLanguageStore } from './stores/languageStore';
+import { useTranslation } from 'react-i18next';
 
 const theme = createTheme({
     primaryColor: 'blue',
@@ -54,33 +58,40 @@ function App() {
     const {isDark} = useThemeStore();
     const {activeSidebar, setActiveSidebar} = useSidebarStore();
     const [activeLeftTab, setActiveLeftTab] = useState<'files' | 'remote'>('files');
+    const { t } = useTranslation();
+    const { currentLanguage } = useLanguageStore();
 
     const toolbarWidth = 48;
     const fileNavWidth = navbarCollapsed ? 0 : 260;
     const settingsWidth = 280;
 
+    // 监听语言变化，更新所有需要翻译的文本
+    useEffect(() => {
+        document.title = t('app.title');
+    }, [currentLanguage, t]);
+
     const toolbarItems = [
         {
             icon: IconFolderOpen,
-            tooltip: navbarCollapsed ? '展开资源管理器' : '收起资源管理器',
+            tooltip: navbarCollapsed ? t('toolbar.expandSidebar') : t('toolbar.collapseSidebar'),
             onClick: () => setNavbarCollapsed(!navbarCollapsed)
         },
-        {icon: IconSearch, tooltip: '搜索'},
+        {icon: IconSearch, tooltip: t('toolbar.search')},
         {
             icon: IconMessage,
-            tooltip: '对话历史',
+            tooltip: t('toolbar.chatHistory'),
             onClick: () => setActiveSidebar(activeSidebar === 'chat-history' ? null : 'chat-history'),
             active: activeSidebar === 'chat-history'
         },
         {
             icon: IconAdjustments,
-            tooltip: '显示设置',
+            tooltip: t('toolbar.displaySettings'),
             onClick: () => setActiveSidebar(activeSidebar === 'settings' ? null : 'settings'),
             active: activeSidebar === 'settings'
         },
         {
             icon: IconSettings2,
-            tooltip: '应用设置',
+            tooltip: t('toolbar.appSettings'),
             onClick: () => setActiveSidebar(activeSidebar === 'app-settings' ? null : 'app-settings'),
             active: activeSidebar === 'app-settings'
         },
@@ -200,7 +211,7 @@ function App() {
                                         value="files"
                                         leftSection={<IconFolderOpen size={16}/>}
                                     >
-                                        本地文件
+                                        {t('nav.localFiles')}
                                     </Tabs.Tab>
                                     <Tabs.Tab
                                         style={{
@@ -209,7 +220,7 @@ function App() {
                                         value="remote"
                                         leftSection={<IconServer size={16}/>}
                                     >
-                                        远程日志
+                                        {t('nav.remoteLogs')}
                                     </Tabs.Tab>
                                 </Tabs.List>
 

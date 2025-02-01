@@ -2,6 +2,7 @@ import { Stack, Text, Paper, Group, ScrollArea, Box, ActionIcon, Modal, Button }
 import { useThemeStore } from '../stores/themeStore';
 import { IconMessage, IconClock, IconTrash, IconMaximize } from '@tabler/icons-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ChatMessage {
   content: string;
@@ -29,6 +30,7 @@ const chatHistory: ChatMessage[] = [
 export default function ChatHistoryPanel() {
   const { isDark } = useThemeStore();
   const [selectedChat, setSelectedChat] = useState<ChatMessage | null>(null);
+  const { t } = useTranslation();
 
   const colors = {
     border: isDark ? '#2C2E33' : '#e9ecef',
@@ -53,7 +55,7 @@ export default function ChatHistoryPanel() {
         <Group justify="space-between" px="md" py="xs">
           <Text fw={500} size="sm" c={colors.text}>
             <IconMessage size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            对话历史
+            {t('chatHistory.title')}
           </Text>
         </Group>
 
@@ -111,7 +113,7 @@ export default function ChatHistoryPanel() {
 
                 <Box mb="xs">
                   <Text size="sm" c="dimmed" lineClamp={2}>
-                    已选择: {chat.selected}
+                    {t('chatHistory.selected')}: {chat.selected}
                   </Text>
                 </Box>
 
@@ -172,7 +174,9 @@ export default function ChatHistoryPanel() {
               border: `1px solid ${colors.border}`,
             }}
           >
-            <Text size="sm" fw={500} c={colors.text} mb="xs">选中的日志内容：</Text>
+            <Text size="sm" fw={500} c={colors.text} mb="xs">
+              {t('chatHistory.selected')}:
+            </Text>
             <Text 
               size="sm" 
               c={colors.text}
@@ -196,7 +200,9 @@ export default function ChatHistoryPanel() {
               border: `1px solid ${colors.border}`,
             }}
           >
-            <Text size="sm" fw={500} c={colors.text} mb="xs">AI 分析结果：</Text>
+            <Text size="sm" fw={500} c={colors.text} mb="xs">
+              {t('chatHistory.aiResponse')}:
+            </Text>
             <Text 
               size="sm" 
               c={colors.text}

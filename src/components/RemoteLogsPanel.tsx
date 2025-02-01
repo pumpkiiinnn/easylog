@@ -14,6 +14,7 @@ import {
   IconBrandMongodb,
   IconBrandMysql,
 } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
 
 interface RemoteLog {
   id: string;
@@ -23,54 +24,54 @@ interface RemoteLog {
   status: 'connected' | 'disconnected' | 'error';
 }
 
-const REMOTE_TYPES = [
-  { 
-    category: 'server',
-    label: '服务器',
-    icon: IconTerminal2,
-    types: [
-      { value: 'ssh', label: 'SSH 服务器', icon: IconTerminal2, color: '#40C057' },
-    ]
-  },
-  {
-    category: 'middleware',
-    label: '中间件',
-    icon: IconAffiliate,
-    types: [
-      { value: 'kafka', label: 'Kafka', icon: IconAffiliate, color: '#228BE6' },
-      { value: 'redis', label: 'Redis', icon: IconDatabase, color: '#FA5252' },
-    ]
-  },
-  {
-    category: 'database',
-    label: '数据库',
-    icon: IconDatabase,
-    types: [
-      { value: 'elasticsearch', label: 'Elasticsearch', icon: IconBrandElastic, color: '#BE4BDB' },
-      { value: 'mongodb', label: 'MongoDB', icon: IconBrandMongodb, color: '#82C91E' },
-      { value: 'mysql', label: 'MySQL', icon: IconBrandMysql, color: '#FAB005' },
-    ]
-  },
-  {
-    category: 'custom',
-    label: '自定义',
-    icon: IconCloud,
-    types: [
-      { value: 'custom', label: '自定义', icon: IconCloud, color: '#868E96' },
-    ]
-  },
-];
-
-// 模拟远程日志数据
-const initialLogs: RemoteLog[] = [
-  { id: '1', name: '生产服务器', type: 'ssh', host: '192.168.1.100', status: 'connected' },
-  { id: '2', name: '消息队列', type: 'kafka', host: 'kafka.example.com', status: 'connected' },
-  { id: '3', name: '日志存储', type: 'elasticsearch', host: 'es.example.com', status: 'error' },
-];
-
 export default function RemoteLogsPanel() {
   const { isDark } = useThemeStore();
-  const [logs, setLogs] = useState<RemoteLog[]>(initialLogs);
+  const { t } = useTranslation();
+  
+  // 将 REMOTE_TYPES 移到组件内部，这样可以使用 t 函数
+  const REMOTE_TYPES = [
+    { 
+      category: 'server',
+      label: t('remoteLogs.categories.server'),
+      icon: IconTerminal2,
+      types: [
+        { value: 'ssh', label: t('remoteLogs.types.ssh'), icon: IconTerminal2, color: '#40C057' },
+      ]
+    },
+    {
+      category: 'middleware',
+      label: t('remoteLogs.categories.middleware'),
+      icon: IconAffiliate,
+      types: [
+        { value: 'kafka', label: t('remoteLogs.types.kafka'), icon: IconAffiliate, color: '#228BE6' },
+        { value: 'redis', label: t('remoteLogs.types.redis'), icon: IconDatabase, color: '#FA5252' },
+      ]
+    },
+    {
+      category: 'database',
+      label: t('remoteLogs.categories.database'),
+      icon: IconDatabase,
+      types: [
+        { value: 'elasticsearch', label: t('remoteLogs.types.elasticsearch'), icon: IconBrandElastic, color: '#BE4BDB' },
+        { value: 'mongodb', label: t('remoteLogs.types.mongodb'), icon: IconBrandMongodb, color: '#82C91E' },
+        { value: 'mysql', label: t('remoteLogs.types.mysql'), icon: IconBrandMysql, color: '#FAB005' },
+      ]
+    },
+    {
+      category: 'custom',
+      label: t('remoteLogs.categories.custom'),
+      icon: IconCloud,
+      types: [
+        { value: 'custom', label: t('remoteLogs.types.custom'), icon: IconCloud, color: '#868E96' },
+      ]
+    },
+  ];
+
+  const [logs, setLogs] = useState<RemoteLog[]>([
+    { id: '1', name: t('remoteLogs.defaultNames.productionServer'), type: 'ssh', host: '192.168.1.100', status: 'connected' },
+    { id: '2', name: t('remoteLogs.defaultNames.messageQueue'), type: 'kafka', host: 'kafka.example.com', status: 'connected' },
+    { id: '3', name: t('remoteLogs.defaultNames.logStorage'), type: 'elasticsearch', host: 'es.example.com', status: 'error' },
+  ]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newLog, setNewLog] = useState<Partial<RemoteLog>>({});
   const [activeTab, setActiveTab] = useState<string>('server');
@@ -122,7 +123,7 @@ export default function RemoteLogsPanel() {
         <Group justify="space-between" px="md" py="xs">
           <Text fw={500} size="sm" c={colors.text}>
             <IconServer size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            远程日志
+            {t('remoteLogs.title')}
           </Text>
           <Button 
             variant="light" 
@@ -130,7 +131,7 @@ export default function RemoteLogsPanel() {
             leftSection={<IconPlus size={14} />}
             onClick={() => setIsAddModalOpen(true)}
           >
-            添加连接
+            {t('remoteLogs.addConnection')}
           </Button>
         </Group>
 
@@ -184,7 +185,7 @@ export default function RemoteLogsPanel() {
           setIsAddModalOpen(false);
           setNewLog({});
         }}
-        title="添加远程日志连接"
+        title={t('remoteLogs.form.title')}
         size="lg"
         styles={{
           content: { backgroundColor: colors.modalBg },
@@ -212,8 +213,8 @@ export default function RemoteLogsPanel() {
             <Tabs.Panel key={category.category} value={category.category}>
               <Stack gap="md" mt="md">
                 <Select
-                  label="选择类型"
-                  placeholder={`选择${category.label}类型`}
+                  label={t('remoteLogs.form.type')}
+                  placeholder={t('remoteLogs.form.selectType', { category: category.label })}
                   data={category.types}
                   value={newLog.type}
                   onChange={(value) => setNewLog({ ...newLog, type: value as RemoteLog['type'] })}
@@ -225,34 +226,33 @@ export default function RemoteLogsPanel() {
                   )}
                 />
                 <TextInput
-                  label="名称"
-                  placeholder="输入连接名称"
+                  label={t('remoteLogs.form.name')}
+                  placeholder={t('remoteLogs.form.inputName')}
                   value={newLog.name || ''}
                   onChange={(e) => setNewLog({ ...newLog, name: e.target.value })}
                 />
                 <TextInput
-                  label="主机地址"
-                  placeholder="输入主机地址"
+                  label={t('remoteLogs.form.host')}
+                  placeholder={t('remoteLogs.form.inputHost')}
                   value={newLog.host || ''}
                   onChange={(e) => setNewLog({ ...newLog, host: e.target.value })}
                 />
-                {/* 可以根据不同类型添加特定的配置字段 */}
                 {category.category === 'server' && (
                   <TextInput
-                    label="SSH 密钥路径"
-                    placeholder="输入 SSH 密钥路径"
+                    label={t('remoteLogs.form.sshKey')}
+                    placeholder={t('remoteLogs.form.inputSshKey')}
                   />
                 )}
                 {category.category === 'database' && (
                   <>
                     <TextInput
-                      label="用户名"
-                      placeholder="输入数据库用户名"
+                      label={t('remoteLogs.form.username')}
+                      placeholder={t('remoteLogs.form.inputUsername')}
                     />
                     <TextInput
-                      label="密码"
+                      label={t('remoteLogs.form.password')}
                       type="password"
-                      placeholder="输入数据库密码"
+                      placeholder={t('remoteLogs.form.inputPassword')}
                     />
                   </>
                 )}
@@ -261,8 +261,12 @@ export default function RemoteLogsPanel() {
           ))}
 
           <Group justify="flex-end" mt="xl">
-            <Button variant="light" onClick={() => setIsAddModalOpen(false)}>取消</Button>
-            <Button onClick={handleAddLog}>添加</Button>
+            <Button variant="light" onClick={() => setIsAddModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleAddLog}>
+              {t('common.add')}
+            </Button>
           </Group>
         </Tabs>
       </Modal>

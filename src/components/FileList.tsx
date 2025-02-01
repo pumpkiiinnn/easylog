@@ -16,6 +16,7 @@ import {isTauri} from '../utils/environment';
 import {invoke} from '@tauri-apps/api/core';
 import {useLogContentStore} from '../stores/logContentStore';
 import { useThemeStore } from '../stores/themeStore';
+import { useTranslation } from 'react-i18next';
 
 // 文件类型图标映射
 const fileTypeIcons: { [key: string]: any } = {
@@ -50,6 +51,7 @@ const logToBackend = async (level: string, message: string) => {
 };
 
 export default function FileList() {
+    const { t } = useTranslation();
     const {readFile} = useFileHandler();
     const {setLogContent, setCurrentFileName} = useLogContentStore();
     const { isDark } = useThemeStore();
@@ -70,8 +72,8 @@ export default function FileList() {
             const selected = await openDialog({
                 multiple: false,
                 filters: [{
-                    name: 'Log Files',
-                    extensions: ['log', 'txt', 'json']
+                    name: t('fileList.filters.name'),
+                    extensions: t('fileList.filters.extensions')
                 }]
             });
 
@@ -117,7 +119,7 @@ export default function FileList() {
             }
         } catch (error) {
             console.error('Error opening file:', error);
-            await logToBackend('error', `Failed to read file: ${error}`);
+            await logToBackend('error', t('fileList.errors.readError', { error }));
             // 这里可以添加错误提示UI
         }
     };
@@ -126,7 +128,7 @@ export default function FileList() {
         <Stack h="100%" spacing="xs">
             <Box p="xs">
                 <TextInput
-                    placeholder="搜索文件..."
+                    placeholder={t('common.search')}
                     leftSection={<IconSearch size={16} color={colors.textDimmed}/>}
                     mb="md"
                     styles={{
@@ -162,7 +164,7 @@ export default function FileList() {
                             }
                         }}
                     >
-                        打开文件
+                        {t('fileList.openFile')}
                     </Button>
 
                     <Button
@@ -180,7 +182,7 @@ export default function FileList() {
                             }
                         }}
                     >
-                        打开文件夹
+                        {t('fileList.openFolder')}
                     </Button>
                 </Stack>
             </Box>
@@ -190,7 +192,7 @@ export default function FileList() {
             <Box px="xs">
                 <Text size="sm" fw={500} c={colors.textDimmed} mb="xs" style={{display: 'flex', alignItems: 'center'}}>
                     <IconClock size={16} style={{marginRight: 6}}/>
-                    最近打开
+                    {t('fileList.recentFiles')}
                 </Text>
             </Box>
 

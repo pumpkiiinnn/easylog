@@ -1,4 +1,4 @@
-import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput } from '@mantine/core';
+import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput, ActionIcon } from '@mantine/core';
 import { IconRefresh, IconDownload, IconFileImport, IconSearch } from '@tabler/icons-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { notifications } from '@mantine/notifications';
@@ -14,6 +14,7 @@ import SearchNavigation from './SearchNavigation';
 import { useViewportSize } from '@mantine/hooks';
 import TextSelectionPopover from './TextSelectionPopover';
 import { useThemeStore } from '../stores/themeStore';
+import { useTranslation } from 'react-i18next';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
@@ -26,6 +27,14 @@ export default function LogContent() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { height } = useViewportSize();
   const { isDark } = useThemeStore();
+  const { t } = useTranslation();
+
+  const colors = {
+    border: isDark ? '#2C2E33' : '#e9ecef',
+    background: isDark ? '#1A1B1E' : '#f8f9fa',
+    text: isDark ? '#C1C2C5' : '#495057',
+    textDimmed: isDark ? '#909296' : '#868e96',
+  };
 
   // 添加 useEffect 来监控 store 内容变化
   useEffect(() => {
@@ -127,8 +136,8 @@ export default function LogContent() {
     if (logFiles.length === 0) {
       console.log('No valid files found');
       notifications.show({
-        title: '无效的文件类型',
-        message: '请拖入 .log、.txt 或 .json 文件',
+        title: t('logContent.errors.invalidType'),
+        message: t('logContent.errors.validFileTypes'),
         color: 'red'
       });
     }
@@ -251,7 +260,7 @@ export default function LogContent() {
             }
           }}
           style={{
-            border: `2px dashed ${isDragging ? '#228be6' : '#e9ecef'}`,
+            border: `2px dashed ${isDragging ? '#228be6' : colors.border}`,
             borderRadius: 8,
             backgroundColor: isDragging ? '#e7f5ff' : 'transparent',
             transition: 'all 0.2s ease',
@@ -266,11 +275,11 @@ export default function LogContent() {
               color={isDragging ? '#228be6' : '#adb5bd'}
               style={{ transition: 'all 0.2s ease' }}
             />
-            <Text size="lg" fw={500} color={isDragging ? '#228be6' : '#495057'}>
-              {isDragging ? '释放以打开文件' : '拖入日志文件以开始'}
+            <Text size="lg" fw={500} color={isDragging ? '#228be6' : colors.text}>
+              {isDragging ? t('logContent.dropToOpen') : t('logContent.dragToStart')}
             </Text>
-            <Text size="sm" color="dimmed">
-              支持 .log 和 .txt 文件
+            <Text size="sm" c="dimmed">
+              {t('logContent.supportedFiles')}
             </Text>
           </Stack>
         </Center>
@@ -283,14 +292,14 @@ export default function LogContent() {
       backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa' 
     }}>
       <Box p="md" style={{ 
-        borderBottom: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
+        borderBottom: `1px solid ${colors.border}`,
         backgroundColor: isDark ? '#25262B' : '#fff',
         boxShadow: isDark 
           ? '0 1px 3px rgba(0,0,0,0.15)' 
           : '0 1px 3px rgba(0,0,0,0.05)'
       }}>
         <Group justify="space-between" mb="md">
-          <Text size="sm" fw={600} c="dimmed">{currentFileName}</Text>
+          <Text size="sm" fw={600} c={colors.textDimmed}>{currentFileName}</Text>
           <Group gap="xs">
             <Button 
               variant="light" 
@@ -299,28 +308,28 @@ export default function LogContent() {
               loading={isLoading}
               onClick={() => currentFile && readFile({ path: currentFile })}
             >
-              刷新
+              {t('logContent.refresh')}
             </Button>
             <Button 
               variant="light"
               size="xs"
               leftSection={<IconDownload size={14} />}
             >
-              导出
+              {t('logContent.export')}
             </Button>
           </Group>
         </Group>
         
         <Box style={{ position: 'relative' }}>
           <TextInput
-            placeholder="搜索日志内容..."
+            placeholder={t('logContent.searchPlaceholder')}
             value={searchText}
             onChange={(event) => setSearchText(event.currentTarget.value)}
             leftSection={<IconSearch size={16} />}
             styles={{
               input: {
                 backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa',
-                border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
+                border: `1px solid ${colors.border}`,
                 '&:focus': {
                   borderColor: '#228be6',
                   boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
@@ -342,7 +351,7 @@ export default function LogContent() {
         backgroundColor: isDark ? '#25262B' : '#fff',
         margin: '12px',
         borderRadius: '8px',
-        border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
+        border: `1px solid ${colors.border}`,
         overflow: 'hidden'
       }}>
         {isLoading ? (
