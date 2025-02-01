@@ -1,5 +1,5 @@
-import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader } from '@mantine/core';
-import { IconRefresh, IconDownload, IconFileImport } from '@tabler/icons-react';
+import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput } from '@mantine/core';
+import { IconRefresh, IconDownload, IconFileImport, IconSearch } from '@tabler/icons-react';
 import { useState, useCallback, useEffect } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useFileHandler } from '../hooks/useFileHandler';
@@ -9,12 +9,13 @@ import { useLogContentStore } from '../stores/logContentStore';
 import { LogParser } from '../utils/logParser';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { LogEntry } from '../types/log';
+import { highlightText } from '../utils/textHighlight';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
   const { isLoading, currentFile, content: hookContent } = useFileHandler();
   const { currentFileName, content: storeContent } = useLogContentStore();
-  const { styles, fontSize } = useLogSettingsStore();
+  const { styles, fontSize, searchText, setSearchText } = useLogSettingsStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
 
   // 添加 useEffect 来监控 store 内容变化
@@ -123,6 +124,7 @@ export default function LogContent() {
   // 渲染单条日志
   const renderLogEntry = (entry: LogEntry) => {
     const style = styles[entry.level];
+    const segments = highlightText(entry.rawContent, searchText);
     
     return (
       <Text
@@ -135,7 +137,17 @@ export default function LogContent() {
           whiteSpace: 'pre-wrap',
         }}
       >
-        {entry.rawContent}
+        {segments.map((segment, index) => (
+          <span
+            key={index}
+            style={{
+              backgroundColor: segment.isHighlight ? '#fff3bf' : 'transparent',
+              color: segment.isHighlight ? '#1a1b1e' : undefined,
+            }}
+          >
+            {segment.text}
+          </span>
+        ))}
       </Text>
     );
   };
@@ -202,7 +214,7 @@ export default function LogContent() {
         borderBottom: '1px solid #e9ecef',
         backgroundColor: '#fff'
       }}>
-        <Group justify="space-between">
+        <Group justify="space-between" mb="xs">
           <Text size="sm" fw={500}>{currentFileName}</Text>
           <Group gap="xs">
             <Button 
@@ -239,6 +251,23 @@ export default function LogContent() {
             </Button>
           </Group>
         </Group>
+        
+        <TextInput
+          placeholder="搜索日志内容..."
+          value={searchText}
+          onChange={(event) => setSearchText(event.currentTarget.value)}
+          leftSection={<IconSearch size={16} />}
+          styles={{
+            input: {
+              backgroundColor: '#f8f9fa',
+              border: '1px solid #e9ecef',
+              '&:focus': {
+                borderColor: '#228be6',
+                boxShadow: '0 0 0 2px rgba(34,139,230,0.1)'
+              }
+            }
+          }}
+        />
       </Box>
 
       <Box style={{ flex: 1, backgroundColor: '#1e1e1e', padding: '12px' }}>

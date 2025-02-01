@@ -4,11 +4,13 @@ import { LogLevel, LogStyle, LogFilter } from '../types/log';
 interface LogSettingsState {
   styles: Record<LogLevel, LogStyle>;
   filter: LogFilter;
+  searchText: string;
   autoRefresh: boolean;
   autoScroll: boolean;
   fontSize: number;
   setStyle: (level: LogLevel, style: LogStyle) => void;
   setFilter: (filter: Partial<LogFilter>) => void;
+  setSearchText: (text: string) => void;
   setAutoRefresh: (enabled: boolean) => void;
   setAutoScroll: (enabled: boolean) => void;
   setFontSize: (size: number) => void;
@@ -24,6 +26,7 @@ export const useLogSettingsStore = create<LogSettingsState>((set) => ({
   filter: {
     levels: ['ERROR', 'WARN', 'INFO', 'DEBUG'],
   },
+  searchText: '',
   autoRefresh: false,
   autoScroll: true,
   fontSize: 13,
@@ -37,6 +40,9 @@ export const useLogSettingsStore = create<LogSettingsState>((set) => ({
     set(state => ({
       filter: { ...state.filter, ...filter }
     })),
+    
+  setSearchText: (text) =>
+    set({ searchText: text }),
     
   setAutoRefresh: (enabled) =>
     set({ autoRefresh: enabled }),
