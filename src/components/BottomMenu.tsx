@@ -1,6 +1,7 @@
 import { Group, Text, Box, ActionIcon } from '@mantine/core';
 import { IconBell, IconUser, IconSettings } from '@tabler/icons-react';
 import { useThemeStore } from '../stores/themeStore';
+import { useSidebarStore } from '../stores/sidebarStore';
 
 interface BottomMenuProps {
   fileFormat?: string;
@@ -18,6 +19,7 @@ export default function BottomMenu({
   style
 }: BottomMenuProps) {
   const { isDark } = useThemeStore();
+  const { activeSidebar, setActiveSidebar } = useSidebarStore();
 
   const colors = {
     text: isDark ? '#909296' : '#868e96',
@@ -55,11 +57,17 @@ export default function BottomMenu({
 
       <Group gap="xs">
         <ActionIcon 
-          variant="subtle" 
+          variant={activeSidebar === 'notifications' ? 'filled' : 'subtle'}
           size="sm"
           color={isDark ? 'gray.4' : 'gray.7'}
+          onClick={() => setActiveSidebar(
+            activeSidebar === 'notifications' ? null : 'notifications'
+          )}
           styles={{
             root: {
+              backgroundColor: activeSidebar === 'notifications' 
+                ? (isDark ? '#2C2E33' : '#e9ecef') 
+                : undefined,
               '&:hover': {
                 backgroundColor: colors.hover,
               }
@@ -68,12 +76,19 @@ export default function BottomMenu({
         >
           <IconBell size={16} />
         </ActionIcon>
+        
         <ActionIcon 
-          variant="subtle" 
+          variant={activeSidebar === 'user' ? 'filled' : 'subtle'}
           size="sm"
           color={isDark ? 'gray.4' : 'gray.7'}
+          onClick={() => setActiveSidebar(
+            activeSidebar === 'user' ? null : 'user'
+          )}
           styles={{
             root: {
+              backgroundColor: activeSidebar === 'user' 
+                ? (isDark ? '#2C2E33' : '#e9ecef') 
+                : undefined,
               '&:hover': {
                 backgroundColor: colors.hover,
               }
@@ -82,12 +97,19 @@ export default function BottomMenu({
         >
           <IconUser size={16} />
         </ActionIcon>
+        
         <ActionIcon 
-          variant="subtle" 
+          variant={activeSidebar === 'settings' ? 'filled' : 'subtle'}
           size="sm"
           color={isDark ? 'gray.4' : 'gray.7'}
+          onClick={() => setActiveSidebar(
+            activeSidebar === 'settings' ? null : 'settings'
+          )}
           styles={{
             root: {
+              backgroundColor: activeSidebar === 'settings' 
+                ? (isDark ? '#2C2E33' : '#e9ecef') 
+                : undefined,
               '&:hover': {
                 backgroundColor: colors.hover,
               }

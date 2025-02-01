@@ -10,7 +10,9 @@ import {
   IconBell,
   IconUser,
   IconMenu2,
-  IconSettings
+  IconSettings,
+  IconAdjustments,
+  IconSettings2
 } from '@tabler/icons-react';
 import FileList from './components/FileList';
 import LogContent from './components/LogContent';
@@ -19,6 +21,8 @@ import { Notifications } from '@mantine/notifications';
 import BottomMenu from './components/BottomMenu';
 import { useState } from 'react';
 import { useThemeStore } from './stores/themeStore';
+import { useSidebarStore } from './stores/sidebarStore';
+import AppSettingsPanel from './components/AppSettingsPanel';
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -44,6 +48,7 @@ const theme = createTheme({
 function App() {
   const [navbarCollapsed, setNavbarCollapsed] = useState(false);
   const { isDark } = useThemeStore();
+  const { activeSidebar, setActiveSidebar } = useSidebarStore();
   
   const toolbarWidth = 48; // 工具栏宽度
   const fileNavWidth = navbarCollapsed ? 0 : 260; // 文件导航栏宽度
@@ -59,6 +64,18 @@ function App() {
     },
     { icon: IconSearch, tooltip: '搜索' },
     { icon: IconBug, tooltip: '调试' },
+    { 
+      icon: IconAdjustments, 
+      tooltip: '显示设置',
+      onClick: () => setActiveSidebar(activeSidebar === 'settings' ? null : 'settings'),
+      active: activeSidebar === 'settings'
+    },
+    { 
+      icon: IconSettings2, 
+      tooltip: '应用设置',
+      onClick: () => setActiveSidebar(activeSidebar === 'app-settings' ? null : 'app-settings'),
+      active: activeSidebar === 'app-settings'
+    },
   ];
 
   // 定义深色和浅色主题的颜色
@@ -113,12 +130,13 @@ function App() {
                 withArrow
               >
                 <ActionIcon
-                  variant="subtle"
+                  variant={item.active ? "filled" : "subtle"}
                   color={isDark ? 'gray.4' : 'gray.7'}
                   size="lg"
                   onClick={item.onClick}
                   styles={{
                     root: {
+                      backgroundColor: item.active ? (isDark ? '#2C2E33' : '#e9ecef') : undefined,
                       '&:hover': {
                         backgroundColor: colors.hover,
                       }
@@ -180,14 +198,23 @@ function App() {
 
           {/* 右侧设置面板 */}
           <div style={{
-            width: settingsWidth,
-            borderLeft: `1px solid ${colors.border}`,
+            width: activeSidebar ? settingsWidth : 0,
+            borderLeft: activeSidebar ? `1px solid ${colors.border}` : 'none',
             backgroundColor: colors.surface,
-            overflow: 'auto',
-            padding: '12px',
+            overflow: 'hidden',
+            transition: 'width 0.3s ease',
             flexShrink: 0,
           }}>
-            <SettingsPanel />
+            {activeSidebar === 'settings' && (
+              <div style={{ width: settingsWidth, padding: '12px' }}>
+                <SettingsPanel />
+              </div>
+            )}
+            {activeSidebar === 'app-settings' && (
+              <div style={{ width: settingsWidth, padding: '12px' }}>
+                <AppSettingsPanel />
+              </div>
+            )}
           </div>
         </div>
       </div>
