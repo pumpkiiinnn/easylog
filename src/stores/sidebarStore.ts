@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type SidebarType = 'settings' | 'notifications' | 'user' | 'app-settings' | null;
+type SidebarType = 'settings' | 'notifications' | 'user' | 'app-settings' | 'chat-history' | null;
 
 interface SidebarState {
   activeSidebar: SidebarType;

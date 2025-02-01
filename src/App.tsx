@@ -12,7 +12,8 @@ import {
   IconMenu2,
   IconSettings,
   IconAdjustments,
-  IconSettings2
+  IconSettings2,
+  IconMessage
 } from '@tabler/icons-react';
 import FileList from './components/FileList';
 import LogContent from './components/LogContent';
@@ -23,6 +24,7 @@ import { useState } from 'react';
 import { useThemeStore } from './stores/themeStore';
 import { useSidebarStore } from './stores/sidebarStore';
 import AppSettingsPanel from './components/AppSettingsPanel';
+import ChatHistoryPanel from './components/ChatHistoryPanel';
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -63,7 +65,12 @@ function App() {
       onClick: () => setNavbarCollapsed(!navbarCollapsed)
     },
     { icon: IconSearch, tooltip: '搜索' },
-    { icon: IconBug, tooltip: '调试' },
+    { 
+      icon: IconMessage, 
+      tooltip: '对话历史',
+      onClick: () => setActiveSidebar(activeSidebar === 'chat-history' ? null : 'chat-history'),
+      active: activeSidebar === 'chat-history'
+    },
     { 
       icon: IconAdjustments, 
       tooltip: '显示设置',
@@ -213,6 +220,11 @@ function App() {
             {activeSidebar === 'app-settings' && (
               <div style={{ width: settingsWidth, padding: '12px' }}>
                 <AppSettingsPanel />
+              </div>
+            )}
+            {activeSidebar === 'chat-history' && (
+              <div style={{ width: settingsWidth }}>
+                <ChatHistoryPanel />
               </div>
             )}
           </div>

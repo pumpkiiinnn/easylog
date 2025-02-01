@@ -257,7 +257,7 @@ export default function LogContent() {
             transition: 'all 0.2s ease',
             margin: 12,
             position: 'relative',
-            zIndex: 1000
+            zIndex: 100
           }}
         >
           <Stack align="center" gap="xs">
