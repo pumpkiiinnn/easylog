@@ -5,10 +5,12 @@ import { notifications } from '@mantine/notifications';
 import { useFileHandler } from '../hooks/useFileHandler';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
 import { isTauri } from '../utils/environment';
+import { useLogContentStore } from '../stores/logContentStore';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
   const { isLoading, currentFile, content, readFile } = useFileHandler();
+  const { currentFileName } = useLogContentStore();
 
   // 处理文件的通用函数
   const handleFiles = async (files: File[] | string[]) => {
@@ -152,8 +154,8 @@ export default function LogContent() {
         backgroundColor: '#fff'
       }}>
         <Group justify="space-between">
-          <Text size="sm" weight={500}>{currentFile}</Text>
-          <Group spacing="xs">
+          <Text size="sm" fw={500}>{currentFileName}</Text>
+          <Group gap="xs">
             <Button 
               variant="subtle" 
               size="sm"

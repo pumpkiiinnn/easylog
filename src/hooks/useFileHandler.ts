@@ -23,7 +23,7 @@ export function useFileHandler() {
     try {
       setIsLoading(true);
       console.log('Reading file with options:', options);
-      
+
       if (isTauri()) {
         const path = options.path.replace(/\\/g, '/');
         console.log('Reading file in Tauri:', path);
@@ -35,6 +35,7 @@ export function useFileHandler() {
         setCurrentFile(result.file_name);
         setContent(result.content);
       } else {
+        console.log('Reading file in web:', options.path);
         // 网页环境下使用 fetch 读取文件
         const response = await fetch(options.path);
         const text = await response.text();
