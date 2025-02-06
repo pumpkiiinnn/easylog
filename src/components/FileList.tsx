@@ -72,8 +72,8 @@ export default function FileList() {
             const selected = await openDialog({
                 multiple: false,
                 filters: [{
-                    name: t('fileList.filters.name'),
-                    extensions: t('fileList.filters.extensions')
+                    name: 'Log Files',
+                    extensions: ['log', 'txt', 'json']
                 }]
             });
 
