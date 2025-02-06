@@ -110,35 +110,49 @@ export default function LogContent() {
     console.log('Handling files:', files);
     let logFiles;
     
-    if (typeof files[0] === 'string') {
-      console.log('Tauri environment detected');
-      logFiles = (files as string[]).filter(file => 
-        file.toLowerCase().endsWith('.log') || 
-        file.toLowerCase().endsWith('.txt') ||
-        file.toLowerCase().endsWith('.json')
-      );
-      console.log('Filtered log files:', logFiles);
-      if (logFiles.length > 0) {
-        await readFile({ path: logFiles[0] });
+    try {
+      if (typeof files[0] === 'string') {
+        console.log('Tauri environment detected');
+        logFiles = (files as string[]).filter(file => 
+          file.toLowerCase().endsWith('.log') || 
+          file.toLowerCase().endsWith('.txt') ||
+          file.toLowerCase().endsWith('.json')
+        );
+        console.log('Filtered log files:', logFiles);
+        if (logFiles.length > 0) {
+          await readFile({ path: logFiles[0] }).catch(error => {
+            throw new Error(`${t('logContent.errors.readError')}: ${error.message}`);
+          });
+        }
+      } else {
+        // 网页环境
+        logFiles = (files as File[]).filter(file => 
+          file.name.toLowerCase().endsWith('.log') || 
+          file.name.toLowerCase().endsWith('.txt') ||
+          file.name.toLowerCase().endsWith('.json')
+        );
+        if (logFiles.length > 0) {
+          await readFile({ path: URL.createObjectURL(logFiles[0]) }).catch(error => {
+            throw new Error(`${t('logContent.errors.readError')}: ${error.message}`);
+          });
+        }
       }
-    } else {
-      // 网页环境
-      logFiles = (files as File[]).filter(file => 
-        file.name.toLowerCase().endsWith('.log') || 
-        file.name.toLowerCase().endsWith('.txt') ||
-        file.name.toLowerCase().endsWith('.json')
-      );
-      if (logFiles.length > 0) {
-        await readFile({ path: URL.createObjectURL(logFiles[0]) });
-      }
-    }
 
-    if (logFiles.length === 0) {
-      console.log('No valid files found');
+      if (logFiles.length === 0) {
+        console.log('No valid files found');
+        notifications.show({
+          title: t('logContent.errors.invalidType'),
+          message: t('logContent.errors.validFileTypes'),
+          color: 'red'
+        });
+      }
+    } catch (error) {
+      console.error('Error handling files:', error);
       notifications.show({
-        title: t('logContent.errors.invalidType'),
-        message: t('logContent.errors.validFileTypes'),
-        color: 'red'
+        title: t('logContent.errors.uploadError'),
+        message: error instanceof Error ? error.message : t('logContent.errors.unknownError'),
+        color: 'red',
+        autoClose: 5000
       });
     }
   };
@@ -192,7 +206,7 @@ export default function LogContent() {
     
     return (
       <Text
-        key={`${entry.timestamp}-${entry.traceId}`}
+        key={`${entry.timestamp}-${entry.traceId}-${index}`}
         data-log-index={index}
         style={{
           color: style.color,
