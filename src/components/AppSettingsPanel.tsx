@@ -35,6 +35,9 @@ import {
 import { useThemeStore } from '../stores/themeStore';
 import { useTranslation } from 'react-i18next';
 import { useLanguageStore } from '../stores/languageStore';
+import { useState } from 'react';
+import { useUserStore } from '../stores/userStore';
+import { LoginModal } from './LoginModal';
 
 interface User {
   name: string;
@@ -98,6 +101,8 @@ export default function AppSettingsPanel() {
   const { isDark } = useThemeStore();
   const { t } = useTranslation();
   const { currentLanguage, setLanguage } = useLanguageStore();
+  const [loginModalOpened, setLoginModalOpened] = useState(false);
+  const { isLoggedIn, clearToken } = useUserStore();
 
   // 将 conversationStyles 移到组件内部，这样可以使用 t 函数
   const conversationStyles = [
@@ -149,8 +154,12 @@ export default function AppSettingsPanel() {
                 <Text size="xs" c="dimmed">{t('settings.subscription.details')}</Text>
               </Box>
             </Group>
-            {!user.isLoggedIn ? (
-              <Button variant="light" size="sm">
+            {!isLoggedIn ? (
+              <Button 
+                variant="light" 
+                size="sm"
+                onClick={() => setLoginModalOpened(true)}
+              >
                 {t('settings.auth.login')}
               </Button>
             ) : (
@@ -164,7 +173,12 @@ export default function AppSettingsPanel() {
                   <Menu.Item>{t('settings.auth.profile')}</Menu.Item>
                   <Menu.Item>{t('settings.auth.billing')}</Menu.Item>
                   <Menu.Divider />
-                  <Menu.Item color="red">{t('settings.auth.logout')}</Menu.Item>
+                  <Menu.Item 
+                    color="red"
+                    onClick={() => clearToken()}
+                  >
+                    {t('settings.auth.logout')}
+                  </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
             )}
@@ -307,6 +321,11 @@ export default function AppSettingsPanel() {
           </Stack>
         </Stack>
       </Paper>
+
+      <LoginModal
+        opened={loginModalOpened}
+        onClose={() => setLoginModalOpened(false)}
+      />
     </Stack>
   );
 } 

@@ -30,6 +30,10 @@
           "path": "**"
         }
       ]
+    },
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://*.ai-ia.cc" }]
     }
   ]
 }
