@@ -14,6 +14,13 @@
     "fs:allow-read",
     "dialog:allow-open",
     "dialog:allow-save",
+    "store:allow-get",
+    "store:allow-set",
+    "store:allow-save",
+    "store:allow-load",
+    "core:path:allow-resolve-directory",
+    "core:path:allow-join",
+    "core:path:default",
     {
       "identifier": "fs:scope",
       "allow": [

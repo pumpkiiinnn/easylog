@@ -39,21 +39,6 @@ import { useState } from 'react';
 import { useUserStore } from '../stores/userStore';
 import { LoginModal } from './LoginModal';
 
-interface User {
-  name: string;
-  avatar: string;
-  isLoggedIn: boolean;
-  subscription: 'free' | 'pro' | 'enterprise';
-}
-
-// 模拟用户数据
-const user: User = {
-  name: "未登录",
-  avatar: "",
-  isLoggedIn: false,
-  subscription: 'free'
-};
-
 // AI 使用数据
 const aiUsage = {
   used: 2.5,
@@ -102,7 +87,9 @@ export default function AppSettingsPanel() {
   const { t } = useTranslation();
   const { currentLanguage, setLanguage } = useLanguageStore();
   const [loginModalOpened, setLoginModalOpened] = useState(false);
-  const { isLoggedIn, clearToken } = useUserStore();
+  const { isLoggedIn, clearUserData, userInfo } = useUserStore();
+
+  console.log('AppSettingsPanel state:', { isLoggedIn, userInfo }); // 添加日志
 
   // 将 conversationStyles 移到组件内部，这样可以使用 t 函数
   const conversationStyles = [
@@ -137,32 +124,28 @@ export default function AppSettingsPanel() {
         <Stack gap="md">
           <Group justify="space-between">
             <Group>
-              <Avatar size="lg" src={user.avatar} color="blue">
+              <Avatar size="lg" src={userInfo?.avatar} color="blue">
                 <IconUser size={24} />
               </Avatar>
               <Box>
                 <Group gap="xs">
-                  <Text size="sm" fw={500}>{user.name}</Text>
+                  <Text size="sm" fw={500}>
+                    {isLoggedIn ? userInfo?.name : t('settings.auth.guest')}
+                  </Text>
                   <Badge
                     size="sm"
                     variant={isDark ? 'light' : 'outline'}
-                    color={user.subscription === 'free' ? 'blue' : 'green'}
+                    color={userInfo?.subscription === 'free' ? 'blue' : 'green'}
                   >
-                    {t(`settings.subscription.${user.subscription}`)}
+                    {t(`settings.subscription.${userInfo?.subscription || 'free'}`)}
                   </Badge>
                 </Group>
-                <Text size="xs" c="dimmed">{t('settings.subscription.details')}</Text>
+                <Text size="xs" c="dimmed">
+                  {isLoggedIn ? userInfo?.email : t('settings.auth.loginTip')}
+                </Text>
               </Box>
             </Group>
-            {!isLoggedIn ? (
-              <Button 
-                variant="light" 
-                size="sm"
-                onClick={() => setLoginModalOpened(true)}
-              >
-                {t('settings.auth.login')}
-              </Button>
-            ) : (
+            {isLoggedIn ? (
               <Menu position="bottom-end" shadow="md">
                 <Menu.Target>
                   <Button variant="subtle" size="sm">
@@ -175,12 +158,20 @@ export default function AppSettingsPanel() {
                   <Menu.Divider />
                   <Menu.Item 
                     color="red"
-                    onClick={() => clearToken()}
+                    onClick={() => clearUserData()}
                   >
                     {t('settings.auth.logout')}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
+            ) : (
+              <Button 
+                variant="light" 
+                size="sm"
+                onClick={() => setLoginModalOpened(true)}
+              >
+                {t('settings.auth.login')}
+              </Button>
             )}
           </Group>
 

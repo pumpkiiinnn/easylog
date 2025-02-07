@@ -9,16 +9,35 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
+interface LoginResponse {
+  code: number;
+  message: string;
+  data: {
+    token: string;
+    userInfo?: {
+      name: string;
+      avatar: string;
+      email: string;
+      subscription: 'free' | 'pro' | 'enterprise';
+    }
+  };
+}
+
 export function LoginModal({ opened, onClose }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { setToken } = useUserStore();
+  const { setUserData } = useUserStore();
   const { t } = useTranslation();
 
   const handleSubmit = async () => {
     try {
+      if (!email || !password) {
+        setError(t('login.fieldsRequired'));
+        return;
+      }
+      
       setLoading(true);
       setError('');
       
@@ -33,13 +52,19 @@ export function LoginModal({ opened, onClose }: LoginModalProps) {
         })
       });
 
-
-      console.log(response);
-
-      const data = response.data as any;
+      const data = (await response.json()) as LoginResponse;
+      console.log('Login response:', data);
       
       if (data.code === 200) {
-        await setToken(data.data.token);
+        const defaultUserInfo = {
+          name: email.split('@')[0],
+          avatar: '',
+          email: email,
+          subscription: 'free' as const
+        };
+        
+        console.log('Setting user data:', data.data.token, defaultUserInfo);
+        await setUserData(data.data.token, defaultUserInfo);
         onClose();
       } else {
         setError(data.message || t('login.unknownError'));
