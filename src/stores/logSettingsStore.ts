@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { LogLevel, LogStyle, LogFilter } from '../types/log';
 
 interface LogSettingsState {
-  styles: Record<LogLevel, LogStyle>;
+  styles: Record<string, LogStyle>;
   filter: LogFilter;
   searchText: string;
   autoRefresh: boolean;
@@ -18,10 +18,22 @@ interface LogSettingsState {
 
 export const useLogSettingsStore = create<LogSettingsState>((set) => ({
   styles: {
-    ERROR: { color: '#ff0000', fontWeight: 600 },
-    WARN: { color: '#ffa500' },
-    INFO: { color: '#0000ff' },
-    DEBUG: { color: '#666666' }
+    error: {
+      color: '#fa5252',
+      fontWeight: 600
+    },
+    warn: {
+      color: '#fd7e14',
+      fontWeight: 500
+    },
+    info: {
+      color: '#228be6',
+      fontWeight: 400
+    },
+    debug: {
+      color: '#868e96',
+      fontWeight: 400
+    }
   },
   filter: {
     levels: ['ERROR', 'WARN', 'INFO', 'DEBUG'],
@@ -29,7 +41,7 @@ export const useLogSettingsStore = create<LogSettingsState>((set) => ({
   searchText: '',
   autoRefresh: false,
   autoScroll: true,
-  fontSize: 13,
+  fontSize: 14,
   
   setStyle: (level, style) => 
     set(state => ({

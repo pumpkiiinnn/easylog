@@ -1,12 +1,10 @@
 export interface LogEntry {
   timestamp: string;
-  level: LogLevel;
-  thread: string;
-  className: string;
-  lineNumber: string;
+  level: string;
   traceId: string;
-  message: string;
+  content: string;
   rawContent: string;
+  logger?: string;
 }
 
 export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';

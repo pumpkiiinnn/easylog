@@ -200,9 +200,12 @@ export default function LogContent() {
 
   // 渲染单条日志
   const renderLogEntry = (entry: LogEntry, index: number) => {
-    const style = styles[entry.level];
+    const style = styles[entry.level.toLowerCase()] || styles.info;
     const segments = highlightText(entry.rawContent, searchText);
     const isCurrentMatch = searchMatches[currentSearchIndex] === index;
+    
+    // 检查是否为堆栈跟踪行
+    const isStackTrace = !entry.timestamp && entry.content.startsWith('\t');
     
     return (
       <Text
@@ -215,9 +218,11 @@ export default function LogContent() {
           lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
           padding: '4px 8px',
+          paddingLeft: isStackTrace ? '24px' : '8px', // 为堆栈跟踪添加缩进
           borderRadius: 4,
           backgroundColor: isCurrentMatch ? '#1a1b1e15' : 'transparent',
           transition: 'background-color 0.2s ease',
+          fontFamily: isStackTrace ? 'monospace' : undefined, // 堆栈跟踪使用等宽字体
         }}
       >
         {segments.map((segment, idx) => (
