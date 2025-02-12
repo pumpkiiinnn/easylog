@@ -31,6 +31,9 @@ import {
   IconBrain,
   IconChevronRight,
   IconPlus,
+  IconLogout,
+  IconUserCircle,
+  IconReceipt,
 } from '@tabler/icons-react';
 import { useThemeStore } from '../stores/themeStore';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +41,8 @@ import { useLanguageStore } from '../stores/languageStore';
 import { useState } from 'react';
 import { useUserStore } from '../stores/userStore';
 import { LoginModal } from './LoginModal';
+import { modals } from '@mantine/modals';
+import { notifications } from '@mantine/notifications';
 
 // AI 使用数据
 const aiUsage = {
@@ -112,6 +117,50 @@ export default function AppSettingsPanel() {
     return currentLang ? `${currentLang.emoji} ${currentLang.label}` : '';
   };
 
+  const handleLogout = () => {
+    console.log('Logout button clicked'); // 添加调试日志
+    
+    modals.openConfirmModal({
+      title: t('settings.auth.logoutConfirm.title'),
+      centered: true,
+      children: (
+        <Text size="sm" c="dimmed">
+          {t('settings.auth.logoutConfirm.message')}
+        </Text>
+      ),
+      labels: {
+        confirm: t('settings.auth.logoutConfirm.confirm'),
+        cancel: t('settings.auth.logoutConfirm.cancel')
+      },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        console.log('Logout confirmation clicked'); // 添加调试日志
+        
+        try {
+          const success = await clearUserData();
+          console.log('Logout result:', success); // 添加调试日志
+          
+          if (success) {
+            notifications.show({
+              title: t('settings.auth.logoutSuccess.title'),
+              message: t('settings.auth.logoutSuccess.message'),
+              color: 'green'
+            });
+          } else {
+            throw new Error('退出登录失败');
+          }
+        } catch (error) {
+          console.error('Logout error:', error); // 添加调试日志
+          notifications.show({
+            title: '错误',
+            message: String(error),
+            color: 'red'
+          });
+        }
+      },
+    });
+  };
+
   return (
     <Stack gap="md" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 48px)' }}>
       <Text fw={500} size="sm" c={colors.text}>
@@ -124,41 +173,85 @@ export default function AppSettingsPanel() {
         <Stack gap="md">
           <Group justify="space-between">
             <Group>
-              <Avatar size="lg" src={userInfo?.avatar} color="blue">
+              <Avatar 
+                size="lg" 
+                src={userInfo?.avatar} 
+                color={isLoggedIn ? "blue" : "gray"}
+                radius="xl"
+                styles={{
+                  root: {
+                    border: `2px solid ${isDark ? '#5C5F66' : '#CED4DA'}`,
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.05)'
+                    }
+                  }
+                }}
+              >
                 <IconUser size={24} />
               </Avatar>
               <Box>
                 <Group gap="xs">
-                  <Text size="sm" fw={500}>
+                  <Text size="sm" fw={600}>
                     {isLoggedIn ? userInfo?.name : t('settings.auth.guest')}
                   </Text>
                   <Badge
                     size="sm"
                     variant={isDark ? 'light' : 'outline'}
                     color={userInfo?.subscription === 'free' ? 'blue' : 'green'}
+                    styles={{
+                      root: {
+                        textTransform: 'none',
+                      }
+                    }}
                   >
                     {t(`settings.subscription.${userInfo?.subscription || 'free'}`)}
                   </Badge>
                 </Group>
-                <Text size="xs" c="dimmed">
+                <Text size="xs" c="dimmed" mt={2}>
                   {isLoggedIn ? userInfo?.email : t('settings.auth.loginTip')}
                 </Text>
               </Box>
             </Group>
             {isLoggedIn ? (
-              <Menu position="bottom-end" shadow="md">
+              <Menu position="bottom-end" shadow="md" width={200}>
                 <Menu.Target>
-                  <Button variant="subtle" size="sm">
+                  <Button 
+                    variant="subtle" 
+                    size="sm"
+                    rightSection={<IconChevronRight size={14} />}
+                    styles={{
+                      root: {
+                        '&:hover': {
+                          backgroundColor: isDark ? '#2C2E33' : '#F1F3F5',
+                        }
+                      }
+                    }}
+                  >
                     {t('settings.auth.manage')}
                   </Button>
                 </Menu.Target>
                 <Menu.Dropdown>
-                  <Menu.Item>{t('settings.auth.profile')}</Menu.Item>
-                  <Menu.Item>{t('settings.auth.billing')}</Menu.Item>
+                  <Menu.Item 
+                    leftSection={<IconUserCircle size={16} />}
+                    component="button"
+                  >
+                    {t('settings.auth.profile')}
+                  </Menu.Item>
+                  <Menu.Item 
+                    leftSection={<IconReceipt size={16} />}
+                    component="button"
+                  >
+                    {t('settings.auth.billing')}
+                  </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item 
                     color="red"
-                    onClick={() => clearUserData()}
+                    leftSection={<IconLogout size={16} />}
+                    onClick={() => {
+                      console.log('Logout menu item clicked'); // 添加调试日志
+                      handleLogout();
+                    }}
                   >
                     {t('settings.auth.logout')}
                   </Menu.Item>
@@ -169,6 +262,14 @@ export default function AppSettingsPanel() {
                 variant="light" 
                 size="sm"
                 onClick={() => setLoginModalOpened(true)}
+                styles={{
+                  root: {
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.02)',
+                    }
+                  }
+                }}
               >
                 {t('settings.auth.login')}
               </Button>

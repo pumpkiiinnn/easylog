@@ -48,7 +48,7 @@ interface UserState {
   isLoggedIn: boolean;
   userInfo: UserInfo | null;
   setUserData: (token: string, userInfo: UserInfo) => Promise<void>;
-  clearUserData: () => Promise<void>;
+  clearUserData: () => Promise<boolean>;
 }
 
 const defaultUserInfo: UserInfo = {
@@ -81,20 +81,36 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
   },
   clearUserData: async () => {
+    console.log('Starting clearUserData'); // 添加调试日志
+    
     const storeInstance = await ensureStore();
     if (!storeInstance) {
       console.error('Failed to initialize store!');
-      return;
+      return false;
     }
     
     try {
+      console.log('Clearing store data...'); // 添加调试日志
+      
+      // 清除存储的数据
       await storeInstance.delete('user-token');
       await storeInstance.delete('user-info');
       await storeInstance.save();
-      set({ token: null, userInfo: null, isLoggedIn: false });
-      console.log('User data cleared');
+      
+      console.log('Store data cleared, updating state...'); // 添加调试日志
+      
+      // 重置状态
+      set({ 
+        token: null, 
+        userInfo: defaultUserInfo,
+        isLoggedIn: false 
+      });
+      
+      console.log('State updated successfully'); // 添加调试日志
+      return true;
     } catch (error) {
-      console.error('Error clearing user data:', error);
+      console.error('Error in clearUserData:', error); // 改进错误日志
+      return false;
     }
   },
 }));

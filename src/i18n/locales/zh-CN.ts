@@ -140,6 +140,18 @@ export default {
       manage: '管理账户',
       profile: '个人资料',
       billing: '账单信息',
+      logoutConfirm: {
+        title: '确认退出',
+        message: '确定要退出登录吗？',
+        confirm: '确认退出',
+        cancel: '取消'
+      },
+      logoutSuccess: {
+        title: '退出成功',
+        message: '您已成功退出登录'
+      },
+      guest: '游客',
+      loginTip: '请登录以使用更多功能'
     },
     subscription: {
       free: '免费版',

@@ -145,6 +145,18 @@ export default {
       manage: 'Manage Account',
       profile: 'Profile',
       billing: 'Billing',
+      logoutConfirm: {
+        title: 'Confirm Logout',
+        message: 'Are you sure you want to logout?',
+        confirm: 'Logout',
+        cancel: 'Cancel'
+      },
+      logoutSuccess: {
+        title: 'Logout Successful',
+        message: 'You have been successfully logged out'
+      },
+      guest: 'Guest',
+      loginTip: 'Please login to access more features'
     },
     apiUsage: {
       title: 'API Usage',

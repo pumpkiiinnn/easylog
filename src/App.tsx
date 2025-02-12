@@ -31,6 +31,7 @@ import RemoteLogsPanel from './components/RemoteLogsPanel';
 import LanguageSwitch from './components/LanguageSwitch';
 import { useLanguageStore } from './stores/languageStore';
 import { useTranslation } from 'react-i18next';
+import { ModalsProvider } from '@mantine/modals';
 
 const theme = createTheme({
     primaryColor: 'blue',
@@ -108,186 +109,183 @@ function App() {
     };
 
     return (
-        <MantineProvider
-            theme={{
-                colorScheme: isDark ? 'dark' : 'light',
-            }}
-            withNormalizeCSS
-        >
-            <Notifications/>
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100vh',
-                overflow: 'hidden',
-                backgroundColor: colors.background,
-                color: colors.text,
-            }}>
+        <MantineProvider>
+            <ModalsProvider>
+                <Notifications />
                 <div style={{
                     display: 'flex',
-                    flex: 1,
-                    overflow: 'hidden'
+                    flexDirection: 'column',
+                    height: '100vh',
+                    overflow: 'hidden',
+                    backgroundColor: colors.background,
+                    color: colors.text,
                 }}>
-                    {/* 工具栏 */}
-                    <Stack
-                        style={{
-                            width: toolbarWidth,
+                    <div style={{
+                        display: 'flex',
+                        flex: 1,
+                        overflow: 'hidden'
+                    }}>
+                        {/* 工具栏 */}
+                        <Stack
+                            style={{
+                                width: toolbarWidth,
+                                backgroundColor: colors.surface,
+                                height: '100%',
+                                padding: '8px 0',
+                                alignItems: 'center',
+                                flexShrink: 0,
+                                borderRight: `1px solid ${colors.border}`,
+                            }}
+                            gap={8}
+                        >
+                            {toolbarItems.map((item, index) => (
+                                <Tooltip
+                                    key={index}
+                                    label={item.tooltip}
+                                    position="right"
+                                    withArrow
+                                >
+                                    <ActionIcon
+                                        variant={item.active ? "filled" : "subtle"}
+                                        color={isDark ? 'gray.4' : 'gray.7'}
+                                        size="lg"
+                                        onClick={item.onClick}
+                                        styles={{
+                                            root: {
+                                                backgroundColor: item.active ? (isDark ? '#2C2E33' : '#e9ecef') : undefined,
+                                                '&:hover': {
+                                                    backgroundColor: colors.hover,
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <item.icon size={22}/>
+                                    </ActionIcon>
+                                </Tooltip>
+                            ))}
+                        </Stack>
+
+                        {/* 左侧导航区域 */}
+                        <div style={{
+                            width: fileNavWidth,
+                            borderRight: navbarCollapsed ? 'none' : `1px solid ${colors.border}`,
                             backgroundColor: colors.surface,
-                            height: '100%',
-                            padding: '8px 0',
-                            alignItems: 'center',
+                            transition: 'all 0.3s ease',
+                            overflow: 'hidden',
+                            position: 'relative',
                             flexShrink: 0,
-                            borderRight: `1px solid ${colors.border}`,
-                        }}
-                        gap={8}
-                    >
-                        {toolbarItems.map((item, index) => (
-                            <Tooltip
-                                key={index}
-                                label={item.tooltip}
-                                position="right"
-                                withArrow
-                            >
-                                <ActionIcon
-                                    variant={item.active ? "filled" : "subtle"}
-                                    color={isDark ? 'gray.4' : 'gray.7'}
-                                    size="lg"
-                                    onClick={item.onClick}
+                        }}>
+                            <div style={{
+                                opacity: navbarCollapsed ? 0 : 1,
+                                transition: 'opacity 0.3s ease',
+                                visibility: navbarCollapsed ? 'hidden' : 'visible',
+                                width: 260,
+                            }}>
+                                <Tabs
+                                    value={activeLeftTab}
+                                    onChange={(value) => setActiveLeftTab(value as 'files' | 'remote')}
                                     styles={{
                                         root: {
-                                            backgroundColor: item.active ? (isDark ? '#2C2E33' : '#e9ecef') : undefined,
-                                            '&:hover': {
-                                                backgroundColor: colors.hover,
-                                            }
+                                            height: '100%',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                        },
+                                        panel: {
+                                            flex: 1,
+                                            overflow: 'auto',
+                                        },
+                                        list: {
+                                            backgroundColor: colors.surface,
+                                            borderBottom: `1px solid ${colors.border}`,
                                         }
                                     }}
                                 >
-                                    <item.icon size={22}/>
-                                </ActionIcon>
-                            </Tooltip>
-                        ))}
-                    </Stack>
+                                    <Tabs.List>
+                                        <Tabs.Tab
+                                            style={{
+                                                width: '50%',
+                                            }}
+                                            value="files"
+                                            leftSection={<IconFolderOpen size={16}/>}
+                                        >
+                                            {t('nav.localFiles')}
+                                        </Tabs.Tab>
+                                        <Tabs.Tab
+                                            style={{
+                                                width: '50%',
+                                            }}
+                                            value="remote"
+                                            leftSection={<IconServer size={16}/>}
+                                        >
+                                            {t('nav.remoteLogs')}
+                                        </Tabs.Tab>
+                                    </Tabs.List>
 
-                    {/* 左侧导航区域 */}
-                    <div style={{
-                        width: fileNavWidth,
-                        borderRight: navbarCollapsed ? 'none' : `1px solid ${colors.border}`,
-                        backgroundColor: colors.surface,
-                        transition: 'all 0.3s ease',
-                        overflow: 'hidden',
-                        position: 'relative',
-                        flexShrink: 0,
-                    }}>
+                                    <Tabs.Panel value="files" p="md">
+                                        <FileList/>
+                                    </Tabs.Panel>
+
+                                    <Tabs.Panel value="remote" p={0}>
+                                        <RemoteLogsPanel/>
+                                    </Tabs.Panel>
+                                </Tabs>
+                            </div>
+                        </div>
+
+                        {/* 主内容区域 */}
                         <div style={{
-                            opacity: navbarCollapsed ? 0 : 1,
-                            transition: 'opacity 0.3s ease',
-                            visibility: navbarCollapsed ? 'hidden' : 'visible',
-                            width: 260,
+                            flex: 1,
+                            overflow: 'auto',
+                            backgroundColor: colors.background,
+                            position: 'relative',
                         }}>
-                            <Tabs
-                                value={activeLeftTab}
-                                onChange={(value) => setActiveLeftTab(value as 'files' | 'remote')}
-                                styles={{
-                                    root: {
-                                        height: '100%',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                    },
-                                    panel: {
-                                        flex: 1,
-                                        overflow: 'auto',
-                                    },
-                                    list: {
-                                        backgroundColor: colors.surface,
-                                        borderBottom: `1px solid ${colors.border}`,
-                                    }
+                            <LogContent/>
+                            <BottomMenu
+                                fileFormat="LOG"
+                                fileSize="2.5MB"
+                                lineCount={1000}
+                                encoding="UTF-8"
+                                style={{
+                                    position: 'fixed',
+                                    bottom: 0,
+                                    left: toolbarWidth + fileNavWidth,
+                                    right: activeSidebar ? settingsWidth : 0,
+                                    transition: 'all 0.3s ease',
+                                    zIndex: 101,
+                                    backgroundColor: colors.surface,
+                                    borderTop: `1px solid ${colors.border}`,
                                 }}
-                            >
-                                <Tabs.List>
-                                    <Tabs.Tab
-                                        style={{
-                                            width: '50%',
-                                        }}
-                                        value="files"
-                                        leftSection={<IconFolderOpen size={16}/>}
-                                    >
-                                        {t('nav.localFiles')}
-                                    </Tabs.Tab>
-                                    <Tabs.Tab
-                                        style={{
-                                            width: '50%',
-                                        }}
-                                        value="remote"
-                                        leftSection={<IconServer size={16}/>}
-                                    >
-                                        {t('nav.remoteLogs')}
-                                    </Tabs.Tab>
-                                </Tabs.List>
+                            />
+                        </div>
 
-                                <Tabs.Panel value="files" p="md">
-                                    <FileList/>
-                                </Tabs.Panel>
-
-                                <Tabs.Panel value="remote" p={0}>
-                                    <RemoteLogsPanel/>
-                                </Tabs.Panel>
-                            </Tabs>
+                        {/* 右侧设置面板 */}
+                        <div style={{
+                            width: activeSidebar ? settingsWidth : 0,
+                            borderLeft: activeSidebar ? `1px solid ${colors.border}` : 'none',
+                            backgroundColor: colors.surface,
+                            overflow: 'hidden',
+                            transition: 'width 0.3s ease',
+                            flexShrink: 0,
+                        }}>
+                            {activeSidebar === 'settings' && (
+                                <div style={{width: settingsWidth, padding: '12px'}}>
+                                    <SettingsPanel/>
+                                </div>
+                            )}
+                            {activeSidebar === 'app-settings' && (
+                                <div style={{width: settingsWidth, padding: '12px'}}>
+                                    <AppSettingsPanel/>
+                                </div>
+                            )}
+                            {activeSidebar === 'chat-history' && (
+                                <div style={{width: settingsWidth}}>
+                                    <ChatHistoryPanel/>
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {/* 主内容区域 */}
-                    <div style={{
-                        flex: 1,
-                        overflow: 'auto',
-                        backgroundColor: colors.background,
-                        position: 'relative',
-                    }}>
-                        <LogContent/>
-                        <BottomMenu
-                            fileFormat="LOG"
-                            fileSize="2.5MB"
-                            lineCount={1000}
-                            encoding="UTF-8"
-                            style={{
-                                position: 'fixed',
-                                bottom: 0,
-                                left: toolbarWidth + fileNavWidth,
-                                right: activeSidebar ? settingsWidth : 0,
-                                transition: 'all 0.3s ease',
-                                zIndex: 101,
-                                backgroundColor: colors.surface,
-                                borderTop: `1px solid ${colors.border}`,
-                            }}
-                        />
-                    </div>
-
-                    {/* 右侧设置面板 */}
-                    <div style={{
-                        width: activeSidebar ? settingsWidth : 0,
-                        borderLeft: activeSidebar ? `1px solid ${colors.border}` : 'none',
-                        backgroundColor: colors.surface,
-                        overflow: 'hidden',
-                        transition: 'width 0.3s ease',
-                        flexShrink: 0,
-                    }}>
-                        {activeSidebar === 'settings' && (
-                            <div style={{width: settingsWidth, padding: '12px'}}>
-                                <SettingsPanel/>
-                            </div>
-                        )}
-                        {activeSidebar === 'app-settings' && (
-                            <div style={{width: settingsWidth, padding: '12px'}}>
-                                <AppSettingsPanel/>
-                            </div>
-                        )}
-                        {activeSidebar === 'chat-history' && (
-                            <div style={{width: settingsWidth}}>
-                                <ChatHistoryPanel/>
-                            </div>
-                        )}
-                    </div>
                 </div>
-            </div>
+            </ModalsProvider>
         </MantineProvider>
     );
 }
