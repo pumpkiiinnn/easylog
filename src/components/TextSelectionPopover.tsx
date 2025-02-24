@@ -45,17 +45,17 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
         if (!selection || selection.isCollapsed) return;
 
         // 检查选中的文本是否在日志内容区域内
-        const logContentArea = document.querySelector('[data-log-content-area]');
-        if (!logContentArea) return;
-
         const range = selection.getRangeAt(0);
-        const selectedNode = range.commonAncestorContainer;
+        const container = range.commonAncestorContainer;
+        const logContentArea = document.querySelector('[data-log-content="true"]');
         
-        // 检查选中的节点是否在日志内容区域内
-        if (!logContentArea.contains(selectedNode)) return;
+        if (!logContentArea || !container) return;
+        
+        // 检查选中的文本是否在日志内容区域内
+        if (!logContentArea.contains(container)) return;
 
         const text = selection.toString().trim();
-        if (text) {          
+        if (text) {
           setSelectedText(text);
           setPosition({
             x: e.clientX,
