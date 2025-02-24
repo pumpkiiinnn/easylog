@@ -44,10 +44,18 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed) return;
 
+        // 检查选中的文本是否在日志内容区域内
+        const logContentArea = document.querySelector('[data-log-content-area]');
+        if (!logContentArea) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedNode = range.commonAncestorContainer;
+        
+        // 检查选中的节点是否在日志内容区域内
+        if (!logContentArea.contains(selectedNode)) return;
+
         const text = selection.toString().trim();
-        if (text) {
-          const range = selection.getRangeAt(0);
-          
+        if (text) {          
           setSelectedText(text);
           setPosition({
             x: e.clientX,
