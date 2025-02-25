@@ -13,6 +13,7 @@ import {
   CopyButton, 
   Button, 
   Avatar, 
+  Switch
 } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import React, { useState, useRef, useEffect } from 'react';
@@ -312,77 +313,126 @@ export default function ChatHistoryPanel() {
       </Modal>
 
       {/* 底部输入区域 */}
-      <Box
-        style={{
-          borderTop: `1px solid ${colors.border}`,
-          backgroundColor: colors.cardBg,
-          padding: '12px 16px',
-          position: 'sticky',
-          bottom: 0,
-          width: '100%'
-        }}
-      >
-        <Stack gap="xs" style={{ width: '100%' }}>
-          <Select
-            size="xs"
-            value={selectedModel}
-            onChange={(value) => setSelectedModel(value || 'gpt-3.5-turbo')}
-            data={AI_MODELS}
-            style={{ maxWidth: '120px' }}
-          />
-          <Group align="flex-end" gap="sm" style={{ width: '100%' }}>
-            <Box style={{ flex: 1 }}>
-              <Textarea
-                placeholder={isThinking ? "AI正在思考中..." : "Shift + Enter 换行"}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onCompositionStart={() => setIsComposing(true)}
-                onCompositionEnd={() => setIsComposing(false)}
-                disabled={isThinking}
+      <Box>
+        {/* 输入框区域 */}
+        <Box
+          style={{
+            backgroundColor: colors.cardBg,
+            padding: '12px 16px',
+            position: 'sticky',
+            bottom: 0,
+            width: '100%'
+          }}
+        >
+          <Stack spacing={4}>
+            <Group align="flex-end" gap="sm" style={{ width: '100%' }}>
+              <Box style={{ flex: 1 }}>
+                <Textarea
+                  placeholder={isThinking ? "AI正在思考中..." : "Shift + Enter 换行"}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onCompositionStart={() => setIsComposing(true)}
+                  onCompositionEnd={() => setIsComposing(false)}
+                  disabled={isThinking}
+                  styles={{
+                    input: {
+                      backgroundColor: colors.inputBg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      resize: 'none',
+                      overflow: 'hidden',
+                      '&:focus': {
+                        borderColor: '#228be6',
+                      }
+                    },
+                    wrapper: {
+                      width: '100%'
+                    }
+                  }}
+                  minRows={1}
+                  maxRows={4}
+                  autosize
+                />
+              </Box>
+              <Tooltip label={isThinking ? "AI思考中" : "发送消息"}>
+                <ActionIcon
+                  variant="filled"
+                  color="blue"
+                  size="lg"
+                  radius="xl"
+                  onClick={handleSubmit}
+                  disabled={!inputText.trim() || isThinking}
+                  style={{
+                    marginBottom: '2px',
+                    transition: 'transform 0.2s',
+                    flexShrink: 0,
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                    }
+                  }}
+                >
+                  <IconSend size={18} />
+                </ActionIcon>
+              </Tooltip>
+            </Group>
+
+            {/* 模型选择和MCP开关 */}
+            <Group justify="flex-start" gap="xs" style={{ marginLeft: 4 }}>
+              <Select
+                size="xs"
+                value={selectedModel}
+                onChange={(value) => setSelectedModel(value || 'gpt-3.5-turbo')}
+                data={AI_MODELS}
+                variant="unstyled"
+                leftSection={<IconRobot size={12} style={{ opacity: 0.5 }} />}
                 styles={{
+                  root: {
+                    width: 'auto'
+                  },
                   input: {
-                    backgroundColor: colors.inputBg,
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: '8px',
-                    padding: '8px 12px',
-                    resize: 'none',
-                    overflow: 'hidden',
-                    '&:focus': {
-                      borderColor: '#228be6',
+                    color: isDark ? '#909296' : '#868e96',
+                    fontWeight: 500,
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    padding: '0',
+                    height: '20px',
+                    lineHeight: '20px',
+                    '&:hover': {
+                      color: isDark ? '#C1C2C5' : '#495057',
                     }
                   },
-                  wrapper: {
-                    width: '100%'
+                  rightSection: {
+                    pointerEvents: 'none',
+                    color: 'inherit',
+                    width: '16px'
                   }
                 }}
-                minRows={1}
-                maxRows={4}
-                autosize
               />
-            </Box>
-            <Tooltip label={isThinking ? "AI思考中" : "发送消息"}>
-              <ActionIcon
-                variant="filled"
-                color="blue"
-                size="lg"
-                radius="xl"
-                onClick={handleSubmit}
-                disabled={!inputText.trim() || isThinking}
-                style={{
-                  marginBottom: '2px',
-                  transition: 'transform 0.2s',
-                  flexShrink: 0,
-                  '&:hover': {
-                    transform: 'scale(1.05)',
+              <Switch
+                size="xs"
+                label="MCP"
+                labelPosition="left"
+                styles={{
+                  label: {
+                    fontSize: '11px',
+                    color: isDark ? '#909296' : '#868e96',
+                    paddingRight: 4
+                  },
+                  track: {
+                    width: '24px',
+                    height: '14px'
+                  },
+                  thumb: {
+                    width: '10px',
+                    height: '10px'
                   }
                 }}
-              >
-                <IconSend size={18} />
-              </ActionIcon>
-            </Tooltip>
-          </Group>
-        </Stack>
+              />
+            </Group>
+          </Stack>
+        </Box>
       </Box>
     </Stack>
   );
