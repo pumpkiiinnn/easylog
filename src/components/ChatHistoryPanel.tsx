@@ -13,7 +13,8 @@ import {
   CopyButton, 
   Button, 
   Avatar, 
-  Switch
+  Switch,
+  Loader
 } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import React, { useState, useRef, useEffect } from 'react';
@@ -34,6 +35,7 @@ export default function ChatHistoryPanel() {
   const [inputText, setInputText] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
@@ -134,8 +136,11 @@ export default function ChatHistoryPanel() {
       
       setInputText('');
       
+      setIsLoading(true);
+      
       // 触发AI回复
       await simulateAIResponse(inputText.trim());
+      setIsLoading(false);
     } catch (error) {
       console.error('Error in message submission:', error);
       setIsThinking(false);
@@ -262,6 +267,21 @@ export default function ChatHistoryPanel() {
               </Text>
             </Box>
           ))}
+          
+          {/* 加载动画 */}
+          {isLoading && (
+            <Box style={{ 
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 0'
+            }}>
+              <Loader size="xs" />
+              <Text size="sm" c="dimmed">AI思考中...</Text>
+            </Box>
+          )}
           <div ref={messagesEndRef} />
         </Stack>
       </ScrollArea>
