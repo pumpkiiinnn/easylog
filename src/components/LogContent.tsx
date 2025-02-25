@@ -379,10 +379,10 @@ export default function LogContent() {
           </Center>
         ) : (
           <ScrollArea 
-            h={height - 150}
-            type="auto"
-            viewportRef={scrollAreaRef}
-            scrollbarSize={8}
+            ref={scrollAreaRef}
+            h={`calc(${height}px - 180px)`}
+            type="hover"
+            data-log-content="true"
           >
             <Stack gap={0} p="md">
               {parsedLogs.map(renderLogEntry)}

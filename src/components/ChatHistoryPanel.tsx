@@ -1,36 +1,43 @@
-import { Stack, Text, Paper, Group, ScrollArea, Box, ActionIcon, Modal, Button } from '@mantine/core';
+import { 
+  Stack, 
+  Text, 
+  Paper, 
+  Group, 
+  ScrollArea, 
+  Box, 
+  ActionIcon, 
+  Select, 
+  Textarea, 
+  Tooltip, 
+  Modal, 
+  CopyButton, 
+  Button, 
+  Avatar, 
+} from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
-import { IconMessage, IconClock, IconTrash, IconMaximize } from '@tabler/icons-react';
-import { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useChatHistoryStore } from '../stores/chatHistoryStore';
+import {IconCheck, IconCopy, IconMessage, IconRobot, IconSend, IconTrash, IconUser} from "@tabler/icons-react";
 
-interface ChatMessage {
-  content: string;
-  timestamp: Date;
-  selected: string;
-  response: string;  // 添加完整的AI响应
-}
-
-// 模拟对话历史数据，实际应从状态管理获取
-const chatHistory: ChatMessage[] = [
-  {
-    content: "这段日志显示了一个严重的内存泄漏问题，建议检查内存分配和释放的逻辑。可能存在资源未正确释放的情况，建议：\n1. 检查对象生命周期\n2. 使用内存分析工具\n3. 查看资源释放点",
-    timestamp: new Date(2024, 2, 15, 14, 30),
-    selected: "Error: memory leak detected in process 1234, current usage: 2.5GB, threshold: 1GB\nStack trace:\n  at MemoryManager.allocate (memory.js:123)\n  at ObjectPool.create (pool.js:45)",
-    response: "根据日志分析，这是一个典型的内存泄漏问题。具体表现为：\n\n1. 当前内存使用量(2.5GB)远超阈值(1GB)\n2. 问题出现在 MemoryManager.allocate 方法\n3. 涉及 ObjectPool 的对象创建\n\n建议排查方向：\n1. 检查 ObjectPool.create 中的对象是否有正确的销毁机制\n2. 验证 MemoryManager.allocate 的内存分配策略\n3. 考虑添加内存使用监控和自动回收机制"
-  },
-  {
-    content: "根据日志分析，这是一个数据库连接超时，可能是由于连接池配置不当或数据库负载过高导致。建议检查数据库连接池的配置和数据库服务器状态。",
-    timestamp: new Date(2024, 2, 15, 10, 20),
-    selected: "Database connection timeout after 30s\nConnection pool: 10/10 used\nQuery: SELECT * FROM large_table WHERE timestamp > ?",
-    response: "分析发现以下问题：\n\n1. 连接池已满(10/10)\n2. 查询可能未优化(大表全量扫描)\n3. 超时时间可能过短(30s)\n\n建议优化方案：\n1. 增加连接池容量\n2. 优化查询语句，添加索引\n3. 调整超时时间配置"
-  },
+const AI_MODELS = [
+  { value: 'gpt-3.5-turbo', label: 'GPT-3.5' },
+  { value: 'gpt-4', label: 'GPT-4' },
+  { value: 'claude-2', label: 'Claude-2' },
 ];
 
 export default function ChatHistoryPanel() {
   const { isDark } = useThemeStore();
-  const [selectedChat, setSelectedChat] = useState<ChatMessage | null>(null);
+  const { messages, clearHistory, addMessage } = useChatHistoryStore();
+  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
+  const [inputText, setInputText] = useState('');
+  const [isComposing, setIsComposing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
+  const [openedMessageId, setOpenedMessageId] = useState<string | null>(null);
+  const [modalContent, setModalContent] = useState('');
 
   const colors = {
     border: isDark ? '#2C2E33' : '#e9ecef',
@@ -38,181 +45,345 @@ export default function ChatHistoryPanel() {
     text: isDark ? '#C1C2C5' : '#495057',
     hover: isDark ? '#2C2E33' : '#f1f3f5',
     modalBg: isDark ? '#1A1B1E' : '#fff',
+    inputBg: isDark ? '#25262B' : '#fff',
+    userBubble: isDark ? '#228be6' : '#228be6',
+    aiBubble: isDark ? '#2C2E33' : '#f1f3f5',
   };
+
+  // 自动滚动到底部
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const formatTime = (date: Date) => {
     return new Intl.DateTimeFormat('zh-CN', {
-      month: 'short',
-      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
   };
 
+  // 处理消息点击
+  const handleMessageClick = (message: any, content: string) => {
+    setModalContent(content);
+    setOpenedMessageId(message.id);
+  };
+
+  // 判断是否需要省略
+  const shouldTruncate = (text: string) => text && text.length > 300;
+
+  // 获取省略后的文本
+  const getTruncatedText = (text: string) => {
+    if (!text) return '';
+    if (shouldTruncate(text)) {
+      return text.slice(0, 300) + '...';
+    }
+    return text;
+  };
+
+  // 模拟AI回复
+  const simulateAIResponse = async (userMessage: string) => {
+    setIsThinking(true);
+    
+    try {
+      // 随机等待1-3秒
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // 模拟的回复内容
+      const responses = [
+        "我已经分析了您提供的日志内容。这看起来是一个常见的问题，建议检查系统配置。",
+        "根据日志显示，这可能是网络连接问题导致的。建议检查网络状态和防火墙设置。",
+        "从日志来看，似乎是应用程序在高负载情况下的性能问题。建议优化相关代码或增加资源配置。",
+        "这个错误日志表明可能存在内存泄漏。建议检查相关组件的资源释放情况。",
+        "日志中显示的错误模式比较典型，可能是配置文件的权限问题导致的。"
+      ];
+      
+      const response = responses[Math.floor(Math.random() * responses.length)];
+      
+      // 添加AI回复
+      addMessage({
+        id: Date.now().toString(),
+        content: response,
+        timestamp: new Date(),
+        role: 'assistant'
+      });
+    } catch (error) {
+      console.error('Error in AI response:', error);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!inputText.trim() || isThinking) return;
+    
+    try {
+      // 添加用户消息
+      addMessage({
+        id: Date.now().toString(),
+        content: inputText.trim(),
+        timestamp: new Date(),
+        role: 'user'
+      });
+      
+      setInputText('');
+      
+      // 触发AI回复
+      await simulateAIResponse(inputText.trim());
+    } catch (error) {
+      console.error('Error in message submission:', error);
+      setIsThinking(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // 如果正在输入法编辑，不处理任何快捷键
+    if (isComposing) return;
+
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift+Enter 换行，保持默认行为
+        return;
+      } else {
+        // Enter 发送消息
+        e.preventDefault();
+        handleSubmit();
+      }
+    }
+  };
+
   return (
-    <>
-      <Stack gap="md">
-        <Group justify="space-between" px="md" py="xs">
+    <Stack gap={0} h="100%" style={{width: '100%'}}>
+      {/* 顶部标题栏 */}
+      <Group 
+        justify="space-between" 
+        px="md" 
+        py="xs" 
+        style={{
+          borderBottom: `1px solid ${colors.border}`,
+          backgroundColor: colors.cardBg,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          width: '100%'
+        }}
+      >
+        <Group gap="xs">
+          <IconMessage size={18} style={{ color: '#228be6' }} />
           <Text fw={500} size="sm" c={colors.text}>
-            <IconMessage size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            {t('chatHistory.title')}
+            AI 助手
           </Text>
         </Group>
+        {messages.length > 0 && (
+          <Tooltip label="清空历史记录">
+            <ActionIcon
+              variant="subtle"
+              color="red"
+              size="sm"
+              onClick={() => clearHistory()}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          </Tooltip>
+        )}
+      </Group>
 
-        <ScrollArea h="calc(100vh - 120px)" type="hover" offsetScrollbars>
-          <Stack gap="md" px="md">
-            {chatHistory.map((chat, index) => (
-              <Paper
-                key={index}
-                p="md"
-                radius="md"
-                style={{
-                  backgroundColor: colors.cardBg,
-                  border: `1px solid ${colors.border}`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    transform: 'translateX(4px)',
-                    borderColor: '#228be6',
-                  }
-                }}
-                onClick={() => setSelectedChat(chat)}
-              >
-                <Group justify="space-between" mb="xs">
-                  <Group gap="xs">
-                    <IconClock size={14} color={colors.text} />
-                    <Text size="xs" c="dimmed">
-                      {formatTime(chat.timestamp)}
-                    </Text>
-                  </Group>
-                  <Group gap="xs">
-                    <ActionIcon 
-                      variant="subtle" 
-                      color="blue" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedChat(chat);
-                      }}
-                    >
-                      <IconMaximize size={14} />
-                    </ActionIcon>
-                    <ActionIcon 
-                      variant="subtle" 
-                      color="red" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // 处理删除
-                      }}
-                    >
-                      <IconTrash size={14} />
-                    </ActionIcon>
-                  </Group>
-                </Group>
-
-                <Box mb="xs">
-                  <Text size="sm" c="dimmed" lineClamp={2}>
-                    {t('chatHistory.selected')}: {chat.selected}
+      {/* 消息列表区域 */}
+      <ScrollArea 
+        h="calc(100vh - 180px)"
+        style={{ 
+          backgroundColor: colors.modalBg,
+          width: '100%'
+        }}
+        viewportRef={scrollAreaRef}
+        offsetScrollbars
+      >
+        <Stack gap="lg" p="md" style={{ width: '100%' }}>
+          {messages.map((chat, index) => (
+            <Box key={index} style={{ width: '100%' }}>
+              {/* 如果有选中的文本，显示在消息前面 */}
+              {chat.selected && (
+                <Paper
+                  p="xs"
+                  mb="xs"
+                  style={{
+                    backgroundColor: colors.hover,
+                    borderRadius: '8px',
+                    border: `1px solid ${colors.border}`,
+                    width: '100%',
+                    wordBreak: 'break-word',
+                    cursor: shouldTruncate(chat.selected) ? 'pointer' : 'default',
+                  }}
+                  onClick={() => shouldTruncate(chat.selected) && handleMessageClick(chat, chat.selected)}
+                >
+                  <Text size="xs" c="dimmed" mb={4}>选中的日志：</Text>
+                  <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                    {getTruncatedText(chat.selected)}
                   </Text>
-                </Box>
+                </Paper>
+              )}
 
-                <Text size="sm" c={colors.text} lineClamp={3}>
-                  {chat.content}
+              {/* 消息内容 */}
+              <Paper
+                p="xs"
+                style={{
+                  backgroundColor: chat.role === 'user' ? colors.userBubble : colors.aiBubble,
+                  color: chat.role === 'user' ? 'white' : colors.text,
+                  borderRadius: '12px',
+                  wordBreak: 'break-word',
+                  width: 'fit-content',
+                  maxWidth: '100%',
+                  cursor: shouldTruncate(chat.content) ? 'pointer' : 'default',
+                  marginLeft: chat.role === 'user' ? 'auto' : '0',
+                }}
+                onClick={() => shouldTruncate(chat.content) && handleMessageClick(chat, chat.content)}
+              >
+                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                  {getTruncatedText(chat.content)}
                 </Text>
               </Paper>
-            ))}
-          </Stack>
-        </ScrollArea>
-      </Stack>
+              
+              {/* 时间戳 */}
+              <Text 
+                size="xs" 
+                c="dimmed" 
+                mt={4} 
+                style={{ 
+                  textAlign: chat.role === 'user' ? 'right' : 'left'
+                }}
+              >
+                {formatTime(chat.timestamp)}
+              </Text>
+            </Box>
+          ))}
+          <div ref={messagesEndRef} />
+        </Stack>
+      </ScrollArea>
 
+      {/* 消息详情弹窗 */}
       <Modal
-        opened={!!selectedChat}
-        onClose={() => setSelectedChat(null)}
+        opened={openedMessageId !== null}
+        onClose={() => setOpenedMessageId(null)}
+        title="消息详情"
         size="lg"
-        title={
-          <Group gap="xs">
-            <IconClock size={16} />
-            <Text>{selectedChat && formatTime(selectedChat.timestamp)}</Text>
-          </Group>
-        }
+        padding="md"
         styles={{
-          content: {
-            backgroundColor: colors.modalBg,
-          },
-          header: {
-            backgroundColor: colors.modalBg,
-            borderBottom: `1px solid ${colors.border}`,
-          },
           title: {
-            color: colors.text,
-          },
-          root: {
-            zIndex: 300,
-          },
-          inner: {
-            padding: '20px',
+            fontSize: '18px',
+            fontWeight: 600,
           },
           body: {
-            backgroundColor: colors.modalBg,
-          }
+            padding: '20px',
+          },
         }}
-        overlayProps={{
-          opacity: 0.7,
-          color: isDark ? '#000' : '#fff',
-          blur: 0,
-        }}
-        radius="md"
-        centered
       >
-        <Stack gap="md">
-          <Paper 
-            p="md" 
-            radius="md"
+        <Stack>
+          <Box
             style={{
-              backgroundColor: colors.cardBg,
+              backgroundColor: colors.inputBg,
+              padding: '16px',
+              borderRadius: '8px',
               border: `1px solid ${colors.border}`,
             }}
           >
-            <Text size="sm" fw={500} c={colors.text} mb="xs">
-              {t('chatHistory.selected')}:
+            <Text style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              {modalContent}
             </Text>
-            <Text 
-              size="sm" 
-              c={colors.text}
-              style={{ 
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-                padding: '8px',
-                backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa',
-                borderRadius: '4px',
-              }}
-            >
-              {selectedChat?.selected}
-            </Text>
-          </Paper>
-
-          <Paper 
-            p="md"
-            radius="md"
-            style={{
-              backgroundColor: colors.cardBg,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <Text size="sm" fw={500} c={colors.text} mb="xs">
-              {t('chatHistory.aiResponse')}:
-            </Text>
-            <Text 
-              size="sm" 
-              c={colors.text}
-              style={{ whiteSpace: 'pre-wrap' }}
-            >
-              {selectedChat?.response}
-            </Text>
-          </Paper>
+          </Box>
+          <Group justify="flex-end">
+            <CopyButton value={modalContent}>
+              {({ copied, copy }) => (
+                <Button
+                  color={copied ? 'teal' : 'blue'}
+                  onClick={copy}
+                  leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
+                >
+                  {copied ? '已复制' : '复制内容'}
+                </Button>
+              )}
+            </CopyButton>
+          </Group>
         </Stack>
       </Modal>
-    </>
+
+      {/* 底部输入区域 */}
+      <Box
+        style={{
+          borderTop: `1px solid ${colors.border}`,
+          backgroundColor: colors.cardBg,
+          padding: '12px 16px',
+          position: 'sticky',
+          bottom: 0,
+          width: '100%'
+        }}
+      >
+        <Stack gap="xs" style={{ width: '100%' }}>
+          <Select
+            size="xs"
+            value={selectedModel}
+            onChange={(value) => setSelectedModel(value || 'gpt-3.5-turbo')}
+            data={AI_MODELS}
+            style={{ maxWidth: '120px' }}
+          />
+          <Group align="flex-end" gap="sm" style={{ width: '100%' }}>
+            <Box style={{ flex: 1 }}>
+              <Textarea
+                placeholder={isThinking ? "AI正在思考中..." : "Shift + Enter 换行"}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                disabled={isThinking}
+                styles={{
+                  input: {
+                    backgroundColor: colors.inputBg,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    resize: 'none',
+                    overflow: 'hidden',
+                    '&:focus': {
+                      borderColor: '#228be6',
+                    }
+                  },
+                  wrapper: {
+                    width: '100%'
+                  }
+                }}
+                minRows={1}
+                maxRows={4}
+                autosize
+              />
+            </Box>
+            <Tooltip label={isThinking ? "AI思考中" : "发送消息"}>
+              <ActionIcon
+                variant="filled"
+                color="blue"
+                size="lg"
+                radius="xl"
+                onClick={handleSubmit}
+                disabled={!inputText.trim() || isThinking}
+                style={{
+                  marginBottom: '2px',
+                  transition: 'transform 0.2s',
+                  flexShrink: 0,
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                  }
+                }}
+              >
+                <IconSend size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Stack>
+      </Box>
+    </Stack>
   );
-} 
+}
