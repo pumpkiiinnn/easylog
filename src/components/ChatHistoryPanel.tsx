@@ -196,7 +196,7 @@ export default function ChatHistoryPanel() {
 
       {/* 消息列表区域 */}
       <ScrollArea 
-        h="calc(100vh - 180px)"
+        h="calc(100vh - 120px)"
         style={{ 
           backgroundColor: colors.modalBg,
           width: '100%'
@@ -318,14 +318,14 @@ export default function ChatHistoryPanel() {
         <Box
           style={{
             backgroundColor: colors.cardBg,
-            padding: '12px 16px',
+            padding: '0px 16px 8px',
             position: 'sticky',
-            bottom: 0,
+            bottom: 32,
             width: '100%'
           }}
         >
-          <Stack spacing={4}>
-            <Group align="flex-end" gap="sm" style={{ width: '100%' }}>
+          <Stack gap={0}>
+            <Group align="flex-end" gap="sm" style={{ width: '100%', marginBottom: 1 }}>
               <Box style={{ flex: 1 }}>
                 <Textarea
                   placeholder={isThinking ? "AI正在思考中..." : "Shift + Enter 换行"}
@@ -343,12 +343,14 @@ export default function ChatHistoryPanel() {
                       padding: '8px 12px',
                       resize: 'none',
                       overflow: 'hidden',
+                      marginBottom: 0,
                       '&:focus': {
                         borderColor: '#228be6',
                       }
                     },
                     wrapper: {
-                      width: '100%'
+                      width: '100%',
+                      marginBottom: 0
                     }
                   }}
                   minRows={1}
@@ -365,7 +367,7 @@ export default function ChatHistoryPanel() {
                   onClick={handleSubmit}
                   disabled={!inputText.trim() || isThinking}
                   style={{
-                    marginBottom: '2px',
+                    marginBottom: '1px',
                     transition: 'transform 0.2s',
                     flexShrink: 0,
                     '&:hover': {
@@ -379,14 +381,13 @@ export default function ChatHistoryPanel() {
             </Group>
 
             {/* 模型选择和MCP开关 */}
-            <Group justify="flex-start" gap="xs" style={{ marginLeft: 4 }}>
+            <Group justify="flex-start" gap="xs" style={{ marginLeft: 4, marginTop: -1 }}>
               <Select
                 size="xs"
                 value={selectedModel}
                 onChange={(value) => setSelectedModel(value || 'gpt-3.5-turbo')}
                 data={AI_MODELS}
                 variant="unstyled"
-                leftSection={<IconRobot size={12} style={{ opacity: 0.5 }} />}
                 styles={{
                   root: {
                     width: 'auto'
@@ -397,16 +398,11 @@ export default function ChatHistoryPanel() {
                     fontSize: '11px',
                     cursor: 'pointer',
                     padding: '0',
-                    height: '20px',
-                    lineHeight: '20px',
+                    height: '18px',
+                    lineHeight: '18px',
                     '&:hover': {
                       color: isDark ? '#C1C2C5' : '#495057',
                     }
-                  },
-                  rightSection: {
-                    pointerEvents: 'none',
-                    color: 'inherit',
-                    width: '16px'
                   }
                 }}
               />
