@@ -12,7 +12,6 @@ import {
   Modal, 
   CopyButton, 
   Button, 
-  Avatar, 
   Switch,
   Loader
 } from '@mantine/core';
@@ -20,7 +19,7 @@ import { useThemeStore } from '../stores/themeStore';
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChatHistoryStore } from '../stores/chatHistoryStore';
-import {IconCheck, IconCopy, IconMessage, IconRobot, IconSend, IconTrash, IconUser} from "@tabler/icons-react";
+import {IconCheck, IconCopy, IconMessage, IconSend, IconTrash} from "@tabler/icons-react";
 
 const AI_MODELS = [
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5' },
