@@ -68,8 +68,6 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
 
         const text = selection.toString().trim();
         if (text) {
-          const range = selection.getRangeAt(0);
-          
           setSelectedText(text);
           setPosition({
             x: e.clientX,
