@@ -22,6 +22,10 @@
     "core:path:allow-resolve-directory",
     "core:path:allow-join",
     "core:path:default",
+    "core:event:allow-emit",
+    "core:event:allow-emit-to",
+    "core:event:allow-listen",
+    "core:event:default",
     {
       "identifier": "fs:scope",
       "allow": [

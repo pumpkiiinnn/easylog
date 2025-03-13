@@ -155,11 +155,11 @@ pub struct LogStreamOptions {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LogStreamData {
-    content: String,
-    is_complete: bool,
-    source: Option<String>,
-    error: Option<String>,
-    timestamp: u64,
+    pub content: String,
+    pub is_complete: bool,
+    pub source: Option<String>,
+    pub error: Option<String>,
+    pub timestamp: u64,
 }
 
 // SSH连接测试
@@ -454,6 +454,9 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
                                 last_log_time = now;
                             }
                             
+                            // 打印每一行日志内容到Rust控制台
+                            info!("[远程日志] {}: {}", log_path, line);
+                            
                             // 为每行创建LogStreamData并发送到前端
                             let log_data = LogStreamData {
                                 content: line,
@@ -466,7 +469,7 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
                                     .as_secs(),
                             };
                             
-                            if let Err(e) = window_clone.emit("log-data", log_data) {
+                            if let Err(e) = window_clone.emit("ssh-log-data", log_data) {
                                 error!("Failed to emit log data: {}", e);
                             }
                         }
