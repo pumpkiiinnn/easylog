@@ -135,26 +135,37 @@ export function useRemoteLogHandler() {
         
         // 监听SSH日志数据
         const logDataListener = await listen('ssh-log-data', (event: any) => {
-          const { id, content: logContent } = event.payload;
-          console.log('收到SSH日志数据:', { id, contentLength: logContent?.length });
+          const { content: logContent, source, timestamp } = event.payload;
+          console.log('收到SSH日志数据:', { source, contentLength: logContent?.length });
+          
+          if (!source || !logContent) {
+            console.warn('收到无效的日志数据:', event.payload);
+            return;
+          }
+          
+          // 查找与日志路径匹配的连接
+          const connection = connections.find(conn => conn.logPath === source);
+          if (!connection) {
+            console.warn('找不到匹配的连接:', source);
+            return;
+          }
           
           // 更新内部日志状态
           setLogContent(prev => {
-            const prevContent = prev[id] || [];
+            const prevContent = prev[connection.id] || [];
             const newContent = [...prevContent, logContent];
             
             // 如果是当前活跃的连接，则更新LogContent组件
-            if (id === activeConnectionId) {
-              const conn = connections.find(c => c.id === id);
-              if (conn) {
-                setGlobalLogContent(newContent.join('\n'));
-                setGlobalFileName(`${conn.name}: ${conn.logPath}`);
-              }
+            if (connection.id === activeConnectionId) {
+              setGlobalLogContent(newContent.join('\n'));
+              setGlobalFileName(`${connection.name}: ${source}`);
+              setContent(newContent.join('\n'));
+              setCurrentFileName(`${connection.name}: ${source}`);
             }
             
             return {
               ...prev,
-              [id]: newContent
+              [connection.id]: newContent
             };
           });
         });
