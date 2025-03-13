@@ -1,10 +1,13 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use log::{debug, error, info, trace, warn, LevelFilter};
+use log::{debug, error, info, warn, LevelFilter};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
+use ssh2::Session;
+use std::path::Path;
+use std::sync::Mutex;
+use tauri::Manager;
 use tokio;
-use ssh2;
 use tauri::Emitter;
 
 // 初始化日志系统的函数
@@ -15,10 +18,10 @@ fn setup_logging() {
         .init();
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct FileContent {
     content: String,
-    file_name: String,
+    total_lines: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -92,13 +95,16 @@ fn read_file(options: FileReadOptions) -> Result<FileContent, String> {
         }
     }
 
-    let file_name = std::path::Path::new(&options.path)
+    let _file_name = std::path::Path::new(&options.path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("unknown")
         .to_string();
 
-    let result = FileContent { content, file_name };
+    let result = FileContent {
+        content: content.clone(),
+        total_lines: content.lines().count(),
+    };
 
     info!("Successfully read file");
     Ok(result)
@@ -111,7 +117,7 @@ fn log_to_frontend(level: String, message: String) {
         "warn" => warn!("{}", message),
         "info" => info!("{}", message),
         "debug" => debug!("{}", message),
-        "trace" => trace!("{}", message),
+        "trace" => debug!("{}", message),
         _ => info!("{}", message),
     }
 }
@@ -147,9 +153,12 @@ pub struct LogStreamOptions {
     follow: bool,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LogStreamData {
     content: String,
+    is_complete: bool,
+    source: Option<String>,
+    error: Option<String>,
     timestamp: u64,
 }
 
@@ -260,7 +269,7 @@ async fn read_remote_log(credentials: SshCredentials, options: LogStreamOptions)
         Err(e) => return Err(format!("无法创建SSH通道: {}", e)),
     };
     
-    // 使用tail命令读取文件，如果follow为true则使用-f选项实时跟踪
+    // 根据选项使用合适的命令
     let command = if options.follow {
         format!("tail -n 1000 -f \"{}\"", options.log_file_path)
     } else {
@@ -271,54 +280,54 @@ async fn read_remote_log(credentials: SshCredentials, options: LogStreamOptions)
         return Err(format!("执行命令失败: {}", e));
     }
     
-    // 读取输出
+    // 读取输出 - 直接使用channel.read方法，不使用BufReader
+    let mut buffer = vec![0; 8192]; // 使用更大的缓冲区
     let mut content = String::new();
-    let mut buffer = Vec::new();
-    if let Err(e) = channel.read_to_end(&mut buffer) {
-        return Err(format!("读取输出失败: {}", e));
+    
+    // 读取所有数据
+    loop {
+        match channel.read(&mut buffer) {
+            Ok(n) => {
+                if n == 0 {
+                    break; // 读取结束
+                }
+                
+                // 将读取的数据转换为字符串并添加到结果中
+                match std::str::from_utf8(&buffer[0..n]) {
+                    Ok(s) => content.push_str(s),
+                    Err(e) => {
+                        return Err(format!("解析日志内容失败: {}", e));
+                    }
+                }
+            },
+            Err(e) => {
+                return Err(format!("读取日志内容失败: {}", e));
+            }
+        }
     }
     
-    // 将二进制数据转换为字符串
-    match String::from_utf8(buffer) {
-        Ok(s) => content = s,
-        Err(e) => return Err(format!("无法解析日志内容: {}", e))
-    }
+    // 等待通道关闭
+    channel.wait_close().ok();
     
-    // 获取退出状态
-    let exit_status = channel.exit_status().unwrap_or(-1);
-    if exit_status != 0 {
-        return Err(format!("命令执行失败，退出码: {}", exit_status));
-    }
-    
-    let file_name = std::path::Path::new(&options.log_file_path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("unknown")
-        .to_string();
-    
+    // 返回结果
     Ok(FileContent {
-        content,
-        file_name,
+        content: content.clone(),
+        total_lines: content.lines().count(),
     })
 }
 
 // 实时监控远程日志文件（使用事件系统）
 #[tauri::command]
-async fn monitor_remote_log(
-    window: tauri::Window,
-    credentials: SshCredentials, 
-    options: LogStreamOptions
-) -> Result<(), String> {
-    info!("Monitoring remote log file: {} from {}", options.log_file_path, credentials.host);
+async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, log_path: String) -> Result<(), String> {
+    info!("Starting remote log monitoring for: {} on {}", log_path, credentials.host);
     
-    let port = credentials.port.unwrap_or(22);
+    // 克隆window以便在tokio线程中使用
     let window_clone = window.clone();
-    let log_path = options.log_file_path.clone();
     
     // 使用tokio线程来处理实时日志监控
     tokio::spawn(async move {
         // 创建TCP连接
-        let tcp = match std::net::TcpStream::connect(format!("{}:{}", credentials.host, port)) {
+        let tcp = match std::net::TcpStream::connect(format!("{}:{}", credentials.host, credentials.port.unwrap_or(22))) {
             Ok(s) => s,
             Err(e) => {
                 let err_msg = format!("无法连接到服务器: {}", e);
@@ -396,33 +405,114 @@ async fn monitor_remote_log(
         let _ = window_clone.emit("ssh-log-connected", log_path.clone());
         
         // 读取输出并发送到前端
-        let mut reader = BufReader::new(channel);
-        for line in reader.lines() {
-            match line {
-                Ok(line) => {
-                    let data = LogStreamData {
-                        content: line,
+        info!("Starting to read remote log data from: {}", log_path);
+        
+        // 使用行计数器跟踪读取的日志行数
+        let mut line_count = 0;
+        let mut last_log_time = std::time::Instant::now();
+        
+        // 初始化一个缓冲区
+        let mut buffer = vec![0; 1024]; 
+        let mut accumulated_data = Vec::new();
+        
+        // 设置为非阻塞模式 - SSH2的Channel不支持set_blocking，使用其他方式处理
+        // 使用session的设置来影响通道行为
+        sess.set_blocking(false);
+        info!("Session set to non-blocking mode, starting read loop");
+        
+        loop {
+            match channel.read(&mut buffer) {
+                Ok(bytes_read) => {
+                    if bytes_read == 0 {
+                        // 在非阻塞模式下，返回0可能意味着暂时没有数据或EOF
+                        if channel.eof() {
+                            info!("Channel EOF detected, connection closed after reading {} lines", line_count);
+                            break;
+                        }
+                        // 等待一下再继续读取
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                        continue;
+                    }
+                    
+                    // 将读取到的数据添加到累积缓冲区
+                    accumulated_data.extend_from_slice(&buffer[0..bytes_read]);
+                    
+                    // 按行处理数据
+                    let mut start_idx = 0;
+                    while let Some(idx) = accumulated_data[start_idx..].iter().position(|&b| b == b'\n') {
+                        let line_end_idx = start_idx + idx;
+                        
+                        // 尝试转换行数据为UTF-8字符串
+                        if let Ok(line) = String::from_utf8(accumulated_data[start_idx..line_end_idx].to_vec()) {
+                            line_count += 1;
+                            
+                            // 每读取100行或者每5秒输出一次调试日志
+                            let now = std::time::Instant::now();
+                            if line_count % 100 == 0 || now.duration_since(last_log_time).as_secs() >= 5 {
+                                info!("Read {} lines from remote log. Latest content: {}", 
+                                     line_count, line.chars().take(50).collect::<String>());
+                                last_log_time = now;
+                            }
+                            
+                            // 为每行创建LogStreamData并发送到前端
+                            let log_data = LogStreamData {
+                                content: line,
+                                is_complete: false,
+                                source: Some(log_path.clone()),
+                                error: None,
+                                timestamp: std::time::SystemTime::now()
+                                    .duration_since(std::time::UNIX_EPOCH)
+                                    .unwrap_or_default()
+                                    .as_secs(),
+                            };
+                            
+                            if let Err(e) = window_clone.emit("log-data", log_data) {
+                                error!("Failed to emit log data: {}", e);
+                            }
+                        }
+                        
+                        // 移动到下一行的开始
+                        start_idx = line_end_idx + 1;
+                    }
+                    
+                    // 保留未处理的数据（可能是不完整的行）
+                    if start_idx < accumulated_data.len() {
+                        accumulated_data = accumulated_data[start_idx..].to_vec();
+                    } else {
+                        accumulated_data.clear();
+                    }
+                },
+                Err(e) => {
+                    // 在非阻塞模式下，WouldBlock错误是正常的
+                    if e.kind() == std::io::ErrorKind::WouldBlock {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                        continue;
+                    }
+                    
+                    let err_msg = format!("读取远程日志失败: {}", e);
+                    error!("{}", err_msg);
+                    
+                    let log_data = LogStreamData {
+                        content: String::new(),
+                        is_complete: true,
+                        source: Some(log_path.clone()),
+                        error: Some(err_msg.clone()),
                         timestamp: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs(),
                     };
                     
-                    if let Err(e) = window_clone.emit("ssh-log-data", data) {
-                        error!("发送日志数据到前端失败: {}", e);
-                        break;
-                    }
-                },
-                Err(e) => {
-                    error!("读取日志行失败: {}", e);
-                    let _ = window_clone.emit("ssh-log-error", format!("读取数据失败: {}", e));
+                    let _ = window_clone.emit("log-data", log_data);
+                    let _ = window_clone.emit("ssh-log-error", err_msg);
                     break;
                 }
             }
         }
         
-        // 通知前端连接已关闭
+        // 通知前端监控已结束
         let _ = window_clone.emit("ssh-log-disconnected", log_path);
+        info!("Remote log monitoring ended");
     });
     
     Ok(())
@@ -437,6 +527,128 @@ async fn stop_remote_log_monitor(window: tauri::Window, log_path: String) -> Res
     let _ = window.emit("ssh-log-monitor-stopped", log_path);
     
     Ok(())
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct LogFileInfo {
+    path: String,
+    name: String,
+    is_remote: bool,
+}
+
+#[tauri::command]
+fn validate_ssh_logs(credentials: SshCredentials) -> Result<Vec<LogFileInfo>, String> {
+    info!("Validating SSH logs from: {}", credentials.host);
+    
+    let port = credentials.port.unwrap_or(22);
+    
+    // 创建TCP连接
+    let tcp = match std::net::TcpStream::connect(format!("{}:{}", credentials.host, port)) {
+        Ok(s) => s,
+        Err(e) => return Err(format!("无法连接到服务器: {}", e)),
+    };
+    
+    // 创建SSH会话
+    let mut sess = match ssh2::Session::new() {
+        Ok(s) => s,
+        Err(e) => return Err(format!("创建SSH会话失败: {}", e)),
+    };
+    
+    sess.set_tcp_stream(tcp);
+    if let Err(e) = sess.handshake() {
+        return Err(format!("SSH握手失败: {}", e));
+    }
+    
+    // 根据认证方式进行身份验证
+    let auth_result = match &credentials.auth_method {
+        AuthMethod::Password { password } => {
+            sess.userauth_password(&credentials.username, password)
+        },
+        AuthMethod::PublicKey { private_key_path, passphrase } => {
+            let path = std::path::Path::new(private_key_path);
+            let passphrase_str = passphrase.as_deref().unwrap_or("");
+            sess.userauth_pubkey_file(
+                &credentials.username,
+                None,
+                path,
+                Some(passphrase_str)
+            )
+        }
+    };
+    
+    if let Err(e) = auth_result {
+        return Err(format!("SSH认证失败: {}", e));
+    }
+    
+    // 查找常见日志目录中的日志文件
+    let common_dirs = vec![
+        "/var/log",
+        "/var/log/system",
+        "/var/log/messages",
+        "/var/log/syslog",
+        "/var/log/nginx",
+        "/var/log/apache2",
+        "/var/log/httpd",
+        // 可以添加更多常见日志目录
+    ];
+    
+    let mut log_files = Vec::new();
+    
+    for dir in common_dirs {
+        // 打开一个通道并执行命令列出目录中的文件
+        let mut channel = match sess.channel_session() {
+            Ok(c) => c,
+            Err(_e) => continue, // 如果无法创建通道，尝试下一个目录
+        };
+        
+        let command = format!("find \"{}\" -type f -name \"*.log\" -o -name \"*.out\" | grep -v \".gz\" | sort | head -50", dir);
+        
+        if let Err(_) = channel.exec(&command) {
+            continue; // 如果命令执行失败，尝试下一个目录
+        }
+        
+        // 读取命令输出 - 直接使用channel.read方法，不使用BufReader
+        let mut buffer = vec![0; 4096];
+        let mut output = Vec::new();
+        
+        loop {
+            match channel.read(&mut buffer) {
+                Ok(n) => {
+                    if n == 0 {
+                        break;
+                    }
+                    output.extend_from_slice(&buffer[0..n]);
+                },
+                Err(_) => break,
+            }
+        }
+        
+        // 将输出转换为字符串并分割成行
+        if let Ok(output_str) = String::from_utf8(output) {
+            for line in output_str.lines() {
+                if line.trim().is_empty() {
+                    continue;
+                }
+                
+                // 获取文件名部分
+                let file_name = match std::path::Path::new(line).file_name() {
+                    Some(name) => match name.to_str() {
+                        Some(s) => s.to_string(),
+                        None => continue,
+                    },
+                    None => continue,
+                };
+                
+                log_files.push(LogFileInfo {
+                    path: line.to_string(),
+                    name: file_name,
+                    is_remote: true,
+                });
+            }
+        }
+    }
+    
+    Ok(log_files)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -458,8 +670,79 @@ pub fn run() {
             test_ssh_connection,
             read_remote_log,
             monitor_remote_log,
-            stop_remote_log_monitor
+            stop_remote_log_monitor,
+            validate_ssh_logs
         ])
+        .setup(|app| {
+            // 正确获取应用数据目录
+            let app_dir = app.path().app_data_dir().expect("无法获取应用数据目录");
+            std::fs::create_dir_all(&app_dir).unwrap();
+            let highlighter_path = app_dir.join("highlighter.json");
+            if !highlighter_path.exists() {
+                let default_highlighter = HighlighterConfig {
+                    items: vec![
+                        HighlighterItem {
+                            id: "error".to_string(),
+                            pattern: "error|错误|异常|exception".to_string(),
+                            color: "#FF5252".to_string(),
+                            is_regex: true,
+                            is_case_sensitive: false,
+                            is_enabled: true,
+                        },
+                        HighlighterItem {
+                            id: "warning".to_string(),
+                            pattern: "warning|警告|warn".to_string(),
+                            color: "#FFC107".to_string(),
+                            is_regex: true,
+                            is_case_sensitive: false,
+                            is_enabled: true,
+                        },
+                        HighlighterItem {
+                            id: "info".to_string(),
+                            pattern: "info|信息".to_string(),
+                            color: "#2196F3".to_string(),
+                            is_regex: true,
+                            is_case_sensitive: false,
+                            is_enabled: true,
+                        },
+                        HighlighterItem {
+                            id: "success".to_string(),
+                            pattern: "success|成功".to_string(),
+                            color: "#4CAF50".to_string(),
+                            is_regex: true,
+                            is_case_sensitive: false,
+                            is_enabled: true,
+                        },
+                        HighlighterItem {
+                            id: "debug".to_string(),
+                            pattern: "debug|调试".to_string(),
+                            color: "#9E9E9E".to_string(),
+                            is_regex: true,
+                            is_case_sensitive: false,
+                            is_enabled: true,
+                        },
+                    ],
+                };
+                let json = serde_json::to_string_pretty(&default_highlighter).unwrap();
+                std::fs::write(&highlighter_path, json).unwrap();
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+struct HighlighterConfig {
+    items: Vec<HighlighterItem>,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+struct HighlighterItem {
+    id: String,
+    pattern: String,
+    color: String,
+    is_regex: bool,
+    is_case_sensitive: bool,
+    is_enabled: bool,
 }

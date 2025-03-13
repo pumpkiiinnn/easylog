@@ -42,28 +42,62 @@ export default {
       custom: '自定义',
     },
     form: {
+      title: '添加远程连接',
       type: '连接类型',
       name: '名称',
       host: '主机地址',
+      port: '端口',
       sshKey: 'SSH 密钥路径',
       username: '用户名',
       password: '密码',
+      authType: '认证类型',
+      privateKey: '私钥',
+      privateKeyPath: '私钥路径',
+      passphrase: '密钥口令',
+      logFilePath: '日志文件路径',
       selectType: '选择类型',
+      selectAuthType: '选择认证类型',
       inputName: '输入连接名称',
       inputHost: '输入主机地址',
       inputSshKey: '输入 SSH 密钥路径',
       inputUsername: '输入用户名',
       inputPassword: '输入密码',
+      inputPrivateKeyPath: '输入私钥路径',
+      inputPassphrase: '输入密钥口令（可选）',
+      inputPort: '输入端口（默认：22）',
+      inputLogFilePath: '输入日志文件路径',
     },
     status: {
       connected: '已连接',
       disconnected: '未连接',
       error: '错误',
+      connecting: '连接中',
     },
     defaultNames: {
       productionServer: '生产服务器',
       messageQueue: '消息队列',
       logStorage: '日志存储',
+    },
+    notifications: {
+      success: '成功',
+      error: '错误',
+      info: '信息',
+      connected: '已连接到 {{name}}',
+      connecting: '正在连接 {{name}}...',
+      disconnected: '已从 {{name}} 断开连接',
+      connectionError: '连接错误',
+      authError: '认证错误',
+    },
+    content: {
+      title: '日志内容',
+      empty: '暂无可用日志',
+      loading: '加载日志中...',
+    },
+    buttons: {
+      connect: '连接',
+      disconnect: '断开',
+      edit: '编辑连接',
+      delete: '删除连接',
     },
   },
   chatHistory: {
@@ -123,9 +157,14 @@ export default {
     subscription: {
       title: '订阅计划',
       upgrade: '升级',
+      free: '免费版',
+      pro: '专业版',
+      enterprise: '企业版',
+      details: '管理订阅计划',
     },
     aiModel: {
       title: 'AI 模型',
+      current: '当前模型',
     },
     logColors: {
       error: '错误颜色',
@@ -153,12 +192,7 @@ export default {
       guest: '游客',
       loginTip: '请登录以使用更多功能'
     },
-    subscription: {
-      free: '免费版',
-      pro: '专业版',
-      enterprise: '企业版',
-      details: '管理订阅计划',
-    },
+
     apiUsage: {
       title: 'API 使用量',
       remaining: '剩余额度',
@@ -186,9 +220,7 @@ export default {
       creative: '创意',
       concise: '简洁',
     },
-    aiModel: {
-      current: '当前模型',
-    },
+
   },
   bottomMenu: {
     format: '格式',

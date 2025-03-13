@@ -1,4 +1,4 @@
-import { Stack, Text, Paper, Group, ActionIcon, Button, Modal, Select, TextInput, Badge, Box, Tabs, Notification, Code, ScrollArea } from '@mantine/core';
+import { Stack, Text, Paper, Group, ActionIcon, Button, Modal, Select, TextInput, Badge, Tabs, Notification } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import { useState, useEffect } from 'react';
 import { 
@@ -20,8 +20,9 @@ import {
   IconAlertCircle,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import { invoke } from '@tauri-apps/api/tauri';
+import {invoke} from '@tauri-apps/api/core';
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { useLogContentStore } from '../stores/logContentStore';
 
 interface RemoteLog {
   id: string;
@@ -42,14 +43,16 @@ interface RemoteLog {
 export default function RemoteLogsPanel() {
   const { isDark } = useThemeStore();
   const { t } = useTranslation();
+  const { setLogContent: setGlobalLogContent, setCurrentFileName } = useLogContentStore();
   
   // 状态管理
   const [isConnecting, setIsConnecting] = useState(false);
   const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info'; message: string} | null>(null);
-  const [activeConnections, setActiveConnections] = useState<{[key: string]: boolean}>({});
+  const [connectedLogs, setConnectedLogs] = useState<{[key: string]: boolean}>({});
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<RemoteLog | null>(null);
   const [logContent, setLogContent] = useState<{[key: string]: string[]}>({});
+  const [activeLogId, setActiveLogId] = useState<string | null>(null);
   
   // 事件监听器引用
   const [unlisteners, setUnlisteners] = useState<UnlistenFn[]>([]);
@@ -75,10 +78,10 @@ export default function RemoteLogsPanel() {
           });
           
           if (connected) {
-            setActiveConnections(prev => ({ ...prev, [id]: true }));
+            setConnectedLogs(prev => ({ ...prev, [id]: true }));
             setNotification({ type: 'success', message: t('remoteLogs.notifications.connected', { name: logs.find(l => l.id === id)?.name || id }) });
           } else {
-            setActiveConnections(prev => ({ ...prev, [id]: false }));
+            setConnectedLogs(prev => ({ ...prev, [id]: false }));
             setNotification({ type: 'error', message: message || t('remoteLogs.notifications.connectionError') });
           }
           setIsConnecting(false);
@@ -87,11 +90,25 @@ export default function RemoteLogsPanel() {
         // 监听SSH日志数据
         const logDataListener = await listen('ssh-log-data', (event: any) => {
           const { id, content } = event.payload;
+          
+          // 更新内部日志状态
           setLogContent(prev => {
             const prevContent = prev[id] || [];
+            const newContent = [...prevContent, content];
+            
+            // 如果是当前活跃的日志，则更新LogContent组件
+            if (id === activeLogId) {
+              const logItem = logs.find(log => log.id === id);
+              if (logItem) {
+                // 将日志内容传递给LogContent组件
+                setGlobalLogContent(newContent.join('\n'));
+                setCurrentFileName(`${logItem.name} (${logItem.host}:${logItem.port || 22})`);
+              }
+            }
+            
             return {
               ...prev,
-              [id]: [...prevContent, content]
+              [id]: newContent
             };
           });
         });
@@ -114,6 +131,10 @@ export default function RemoteLogsPanel() {
   const connectSsh = async (log: RemoteLog) => {
     try {
       setIsConnecting(true);
+      setNotification({ type: 'info', message: t('remoteLogs.notification.connecting', { name: log.name }) });
+      
+      // 设置为活跃日志，标记当前选中的服务器
+      setActiveLogId(log.id);
       
       // 准备SSH凭证
       const sshCredentials = {
@@ -127,19 +148,35 @@ export default function RemoteLogsPanel() {
         })
       };
       
-      // 调用Rust后端
-      await invoke('test_ssh_connection', { id: log.id, credentials: sshCredentials });
+      // 调用Rust后端测试连接 - 使用嵌套格式的credentials参数
+      await invoke('test_ssh_connection', { credentials: sshCredentials });
       
       // 启动日志流
       if (log.logFilePath) {
-        await invoke('start_log_stream', {
-          id: log.id,
-          credentials: sshCredentials,
+        // 使用嵌套格式的参数结构调用monitor_remote_log函数
+        await invoke('monitor_remote_log', {
+          id: log.id,  // 用于识别连接的ID
+          credentials: sshCredentials,  // 嵌套凭证格式
           options: {
             log_file_path: log.logFilePath,
             follow: true
           }
         });
+        
+        // 更新连接状态
+        setConnectedLogs(prev => ({
+          ...prev,
+          [log.id]: true
+        }));
+        
+        // 初始化LogContent组件的内容
+        setGlobalLogContent('');
+        setCurrentFileName(`${log.name} (${log.host}:${log.port || 22})`);
+        
+        // 更新日志状态为已连接
+        updateLogStatus(log.id, 'connected');
+        
+        setNotification({ type: 'success', message: t('remoteLogs.notification.connected', { name: log.name }) });
       }
     } catch (error) {
       console.error('SSH connection error:', error);
@@ -162,23 +199,35 @@ export default function RemoteLogsPanel() {
   const disconnectSsh = async (id: string) => {
     try {
       await invoke('stop_log_stream', { id });
-      setActiveConnections(prev => ({ ...prev, [id]: false }));
+      setConnectedLogs(prev => ({ ...prev, [id]: false }));
       
       // 更新日志状态为断开连接
-      setLogs(prevLogs => {
-        return prevLogs.map(log => {
-          if (log.id === id) {
-            return { ...log, status: 'disconnected' };
-          }
-          return log;
-        });
-      });
+      updateLogStatus(id, 'disconnected');
       
-      setNotification({ type: 'info', message: t('remoteLogs.notifications.disconnected', { name: logs.find(l => l.id === id)?.name || id }) });
+      // 如果当前活跃的日志是被断开的日志，则清理LogContent状态
+      if (activeLogId === id) {
+        setActiveLogId(null);
+        setGlobalLogContent('');
+        setCurrentFileName('');
+      }
+      
+      setNotification({ type: 'info', message: t('remoteLogs.notification.disconnected', { name: logs.find(l => l.id === id)?.name || id }) });
     } catch (error) {
       console.error('SSH disconnection error:', error);
       setNotification({ type: 'error', message: String(error) });
     }
+  };
+  
+  // 更新日志状态函数
+  const updateLogStatus = (id: string, status: RemoteLog['status'], message?: string) => {
+    setLogs(prevLogs => {
+      return prevLogs.map(log => {
+        if (log.id === id) {
+          return { ...log, status, message };
+        }
+        return log;
+      });
+    });
   };
   
   // 打开编辑模态框
@@ -249,7 +298,8 @@ export default function RemoteLogsPanel() {
     { id: '3', name: t('remoteLogs.defaultNames.logStorage'), type: 'elasticsearch', host: 'es.example.com', status: 'error' },
   ]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newLog, setNewLog] = useState<Partial<RemoteLog>>({});
+  // 设置默认使用password认证模式
+  const [newLog, setNewLog] = useState<Partial<RemoteLog>>({ authType: 'password' });
   const [activeTab, setActiveTab] = useState<string>('server');
 
   const colors = {
@@ -277,13 +327,26 @@ export default function RemoteLogsPanel() {
 
   const handleAddLog = () => {
     if (newLog.name && newLog.type && newLog.host) {
-      setLogs([...logs, {
+      // 创建新的日志连接，包含所有必要字段
+      const newLogEntry: RemoteLog = {
         id: Date.now().toString(),
         name: newLog.name,
         type: newLog.type as RemoteLog['type'],
         host: newLog.host,
-        status: 'disconnected'
-      }]);
+        port: newLog.port || 22,
+        status: 'disconnected',
+        // SSH连接特有字段
+        ...(newLog.type === 'ssh' ? {
+          username: newLog.username || '',
+          authType: newLog.authType || 'password',  // 默认使用password模式
+          password: newLog.authType === 'password' ? newLog.password : undefined,
+          privateKeyPath: newLog.authType === 'key' ? newLog.privateKeyPath : undefined,
+          passphrase: newLog.authType === 'key' ? newLog.passphrase : undefined,
+          logFilePath: newLog.logFilePath || '/var/log/syslog'
+        } : {})
+      };
+      
+      setLogs([...logs, newLogEntry]);
       setIsAddModalOpen(false);
       setNewLog({});
     }
@@ -318,13 +381,24 @@ export default function RemoteLogsPanel() {
               p="md"
               radius="md"
               style={{
-                backgroundColor: colors.cardBg,
-                border: `1px solid ${colors.border}`,
+                backgroundColor: activeLogId === log.id ? (isDark ? '#2C2E33' : '#E9ECEF') : colors.cardBg,
+                border: `1px solid ${activeLogId === log.id ? '#228be6' : colors.border}`,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                '&:hover': {
-                  transform: 'translateX(4px)',
-                  borderColor: '#228be6',
+              }}
+              onClick={() => {
+                // 如果已连接，则仅设置为活跃状态
+                if (log.status === 'connected') {
+                  setActiveLogId(log.id);
+                  // 更新LogContent显示
+                  if (logContent[log.id]) {
+                    setGlobalLogContent(logContent[log.id].join('\n'));
+                    setCurrentFileName(`${log.name} (${log.host}:${log.port || 22})`);
+                  }
+                } else {
+                  // 未连接则先连接
+                  connectSsh(log);
+                  setActiveLogId(log.id);
                 }
               }}
             >
@@ -409,38 +483,7 @@ export default function RemoteLogsPanel() {
         </Notification>
       )}
 
-      {/* 日志内容显示区域 */}
-      {activeConnections && Object.keys(activeConnections).length > 0 && (
-        <Paper
-          p="md"
-          radius="md"
-          mt="md"
-          style={{
-            backgroundColor: colors.cardBg,
-            border: `1px solid ${colors.border}`,
-            height: '300px',
-            overflow: 'hidden',
-          }}
-        >
-          <Text fw={500} size="sm" c={colors.text} mb="xs">
-            {t('remoteLogs.content.title')}
-          </Text>
-          <ScrollArea h={240} type="auto">
-            {Object.entries(logContent).map(([id, lines]) => (
-              activeConnections[id] && (
-                <Box key={id}>
-                  <Text fw={500} size="xs" c={colors.text}>
-                    {logs.find(l => l.id === id)?.name || id}
-                  </Text>
-                  <Code block style={{ backgroundColor: isDark ? '#1A1B1E' : '#F1F3F5', color: isDark ? '#C1C2C5' : '#495057' }}>
-                    {lines.join('\n')}
-                  </Code>
-                </Box>
-              )
-            ))}
-          </ScrollArea>
-        </Paper>
-      )}
+      {/* 当远程日志连接后，内容将显示在主内容区域(LogContent组件) */}
 
       <Modal
         opened={isAddModalOpen}
