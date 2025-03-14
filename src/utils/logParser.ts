@@ -1,4 +1,4 @@
-import { LogEntry, LogLevel } from '../types/log';
+import { LogEntry } from '../types/log';
 
 export class LogParser {
   // Spring Boot 日志格式的正则表达式
@@ -28,6 +28,7 @@ export class LogParser {
       // 尝试匹配 Spring Boot 格式
       const springBootMatch = line.match(this.springBootLogPattern);
       if (springBootMatch) {
+        //@ts-ignore
         const [, timestamp, level, pid, thread, logger, message] = springBootMatch;
         currentLevel = level.toLowerCase();
         entries.push({

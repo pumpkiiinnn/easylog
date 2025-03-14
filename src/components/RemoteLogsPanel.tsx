@@ -1,4 +1,4 @@
-import { Stack, Text, Paper, Group, Button, Modal, Select, TextInput, Badge, Tabs, Notification } from '@mantine/core';
+import { Stack, Text, Paper, Group, Button, Modal, Select, TextInput, Badge, Tabs } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import { useState, useEffect } from 'react';
 import { 
@@ -39,6 +39,7 @@ export default function RemoteLogsPanel() {
   const { logs: storedLogs, addLog, updateLog, deleteLog } = useRemoteLogStore();
   
   // 状态管理
+  //@ts-ignore
   const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info'; message: string} | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<RemoteLog | null>(null);

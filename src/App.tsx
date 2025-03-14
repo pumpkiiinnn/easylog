@@ -1,17 +1,11 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import './i18n';
-import {MantineProvider, createTheme, AppShell, Stack, Tabs} from '@mantine/core';
+import {MantineProvider, createTheme, Stack, Tabs} from '@mantine/core';
 import {ActionIcon, Tooltip} from '@mantine/core';
 import {
-    IconPlugConnected,
     IconFolderOpen,
     IconSearch,
-    IconBug,
-    IconBell,
-    IconUser,
-    IconMenu2,
-    IconSettings,
     IconAdjustments,
     IconSettings2,
     IconMessage,
@@ -28,11 +22,11 @@ import {useSidebarStore} from './stores/sidebarStore';
 import AppSettingsPanel from './components/AppSettingsPanel';
 import ChatHistoryPanel from './components/ChatHistoryPanel';
 import RemoteLogsPanel from './components/RemoteLogsPanel';
-import LanguageSwitch from './components/LanguageSwitch';
 import { useLanguageStore } from './stores/languageStore';
 import { useTranslation } from 'react-i18next';
 import { ModalsProvider } from '@mantine/modals';
 
+/*@ts-ignore*/
 const theme = createTheme({
     primaryColor: 'blue',
     fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',

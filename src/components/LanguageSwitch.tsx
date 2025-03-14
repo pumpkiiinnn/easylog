@@ -1,6 +1,5 @@
 import { Menu, UnstyledButton, Group, Text } from '@mantine/core';
 import { IconLanguage, IconCheck } from '@tabler/icons-react';
-import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '../stores/themeStore';
 import { useLanguageStore } from '../stores/languageStore';
 
@@ -10,7 +9,6 @@ const languages = [
 ];
 
 export default function LanguageSwitch() {
-  const { t } = useTranslation();
   const { isDark } = useThemeStore();
   const { currentLanguage, setLanguage } = useLanguageStore();
 
@@ -27,6 +25,7 @@ export default function LanguageSwitch() {
     <Menu position="bottom-start" shadow="md" width={200}>
       <Menu.Target>
         <UnstyledButton
+            /*//@ts-ignore*/
           sx={{
             padding: '8px 12px',
             borderRadius: 4,

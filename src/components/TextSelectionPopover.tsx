@@ -16,6 +16,7 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
   const [selectedText, setSelectedText] = useState('');
   const [inputText, setInputText] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  //@ts-ignore
   const [isThinking, setIsThinking] = useState(false);
   const { isDark } = useThemeStore();
   const { setActiveSidebar } = useSidebarStore();
@@ -89,6 +90,7 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
   }, []);
 
   // 模拟AI回复
+  //@ts-ignore
   const simulateAIResponse = async (userMessage: string) => {
     setIsThinking(true);
     

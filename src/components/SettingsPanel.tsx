@@ -1,4 +1,4 @@
-import { Stack, Text, Switch, ColorInput, NumberInput, Select, Box } from '@mantine/core';
+import { Stack, Text, Switch, ColorInput, NumberInput, Box } from '@mantine/core';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { useThemeStore } from '../stores/themeStore';
 import { LogLevel } from '../types/log';

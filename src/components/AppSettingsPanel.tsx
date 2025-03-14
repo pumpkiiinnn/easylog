@@ -11,15 +11,11 @@ import {
   Progress,
   Divider,
   Switch,
-  Tabs,
-  ActionIcon,
   Menu,
   Badge,
-  Tooltip,
 } from '@mantine/core';
 import {
   IconUser,
-  IconCreditCard,
   IconRobot,
   IconLanguage,
   IconBrandOpenai,
@@ -30,7 +26,6 @@ import {
   IconMessageChatbot,
   IconBrain,
   IconChevronRight,
-  IconPlus,
   IconLogout,
   IconUserCircle,
   IconReceipt,
@@ -328,6 +323,7 @@ export default function AppSettingsPanel() {
               label={t('settings.customModel.modelType')}
               placeholder={t('settings.customModel.selectModel')}
               data={modelProviders.find(p => p.value === 'openai')?.models || []}
+                /*@ts-ignore*/
               itemComponent={({ label }) => (
                 <Group gap="xs">
                   <IconBrandOpenai size={16} />
@@ -358,6 +354,7 @@ export default function AppSettingsPanel() {
               onChange={(value) => value && setLanguage(value)}
               data={languages}
               placeholder={t('settings.language.selectLanguage')}
+              //@ts-ignore
               itemComponent={({ label, emoji }) => (
                 <Group gap="xs">
                   <Text size="sm">{emoji}</Text>

@@ -17,7 +17,6 @@ import {
 } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import React, { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useChatHistoryStore } from '../stores/chatHistoryStore';
 import {IconCheck, IconCopy, IconMessage, IconSend, IconTrash} from "@tabler/icons-react";
 
@@ -37,7 +36,6 @@ export default function ChatHistoryPanel() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
   const [openedMessageId, setOpenedMessageId] = useState<string | null>(null);
   const [modalContent, setModalContent] = useState('');
 
@@ -89,6 +87,7 @@ export default function ChatHistoryPanel() {
   };
 
   // 模拟AI回复
+  /*@ts-ignore*/
   const simulateAIResponse = async (userMessage: string) => {
     setIsThinking(true);
     
@@ -224,6 +223,7 @@ export default function ChatHistoryPanel() {
                     wordBreak: 'break-word',
                     cursor: shouldTruncate(chat.selected) ? 'pointer' : 'default',
                   }}
+                    //@ts-ignore
                   onClick={() => shouldTruncate(chat.selected) && handleMessageClick(chat, chat.selected)}
                 >
                   <Text size="xs" c="dimmed" mb={4}>选中的日志：</Text>

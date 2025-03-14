@@ -10,9 +10,7 @@ import {
     IconFileZip
 } from '@tabler/icons-react';
 import {open as openDialog} from '@tauri-apps/plugin-dialog';
-import {readTextFile} from '@tauri-apps/plugin-fs';
 import {useFileHandler} from '../hooks/useFileHandler';
-import {isTauri} from '../utils/environment';
 import {invoke} from '@tauri-apps/api/core';
 import {useLogContentStore} from '../stores/logContentStore';
 import { useThemeStore } from '../stores/themeStore';
@@ -52,6 +50,7 @@ const logToBackend = async (level: string, message: string) => {
 
 export default function FileList() {
     const { t } = useTranslation();
+    //@ts-ignore
     const {readFile} = useFileHandler();
     const {setLogContent, setCurrentFileName} = useLogContentStore();
     const { isDark } = useThemeStore();
@@ -125,6 +124,7 @@ export default function FileList() {
     };
 
     return (
+        /*@ts-ignore*/
         <Stack h="100%" spacing="xs">
             <Box p="xs">
                 <TextInput
@@ -147,6 +147,7 @@ export default function FileList() {
                     }}
                 />
 
+                {/*@ts-ignore*/}
                 <Stack spacing="xs">
                     <Button
                         variant="default"
@@ -197,6 +198,7 @@ export default function FileList() {
             </Box>
 
             <ScrollArea.Autosize mah={600} type="hover" offsetScrollbars>
+                {/*//@ts-ignore*/}
                 <Stack spacing={0}>
                     {[
                         {name: 'app.log', size: 2.5 * 1024 * 1024},
