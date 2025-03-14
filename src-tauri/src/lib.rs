@@ -444,8 +444,8 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
             }
         };
         
-        // 使用tail -f命令来实时读取文件内容
-        let command = format!("tail -f \"{}\"", log_path);
+        // 使用tail -f命令来实时读取文件内容，显示最后100行
+        let command = format!("tail -n 100 -f \"{}\"", log_path);
         
         if let Err(e) = channel.exec(&command) {
             let err_msg = format!("执行命令失败: {}", e);
