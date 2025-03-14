@@ -114,17 +114,19 @@ export function useRemoteLogHandler() {
           
           if (connected) {
             notifications.show({
-              title: t('remoteLogs.notifications.connected'),
-              message: t('remoteLogs.notifications.connectedDetail', { 
+              title: t('remoteLogs.notification.connected'),
+              message: t('remoteLogs.notification.connectedDetail', { 
                 name: connectionsRef.current.find(c => c.id === id)?.name || id 
               }),
               color: 'green',
+              autoClose: 3000 // 3秒后自动关闭
             });
           } else {
             notifications.show({
-              title: t('remoteLogs.notifications.connectionError'),
-              message: message || t('remoteLogs.notifications.unknownError'),
+              title: t('remoteLogs.notification.error'),
+              message: message || t('remoteLogs.notification.connectionError'),
               color: 'red',
+              autoClose: 3000 // 3秒后自动关闭
             });
           }
           setIsConnecting(false);
@@ -203,9 +205,10 @@ export function useRemoteLogHandler() {
           console.error('SSH日志错误:', errorMessage);
           
           notifications.show({
-            title: t('remoteLogs.errors.logError'),
+            title: t('remoteLogs.notification.error'),
             message: errorMessage,
             color: 'red',
+            autoClose: 3000 // 3秒后自动关闭
           });
           
           // 如果有活跃连接，更新其状态为错误
@@ -326,9 +329,10 @@ export function useRemoteLogHandler() {
         } catch (error) {
           console.error('monitor_remote_log调用失败:', error);
           notifications.show({
-            title: t('remoteLogs.errors.monitoringFailed'),
+            title: t('remoteLogs.notification.error'),
             message: String(error),
             color: 'red',
+            autoClose: 3000 // 3秒后自动关闭
           });
           updateConnectionStatus(connectionId, 'error', String(error));
           throw error;
@@ -368,9 +372,10 @@ export function useRemoteLogHandler() {
     } catch (error) {
       console.error('获取远程日志失败:', error);
       notifications.show({
-        title: t('remoteLogs.errors.fetchFailed'),
+        title: t('remoteLogs.notification.error'),
         message: String(error),
         color: 'red',
+        autoClose: 3000 // 3秒后自动关闭
       });
       throw error;
     } finally {
@@ -382,14 +387,14 @@ export function useRemoteLogHandler() {
   const connectToRemoteLog = async (log: RemoteLog) => {
     try {
       setIsConnecting(true);
-      console.log('连接到远程日志:', log);
       
-      notifications.show({
-        title: t('remoteLogs.notifications.connecting'),
-        message: t('remoteLogs.notifications.connectingDetail', { name: log.name }),
-        color: 'blue',
-        loading: true
-      });
+      // notifications.show({
+      //   title: t('remoteLogs.notification.connecting'),
+      //   message: t('remoteLogs.notification.connectingDetail', { name: log.name }),
+      //   color: 'blue',
+      //   loading: true,
+      //   autoClose: 3000 // 3秒后自动关闭
+      // });
       
       // 准备SSH凭证
       const sshCredentials: SshCredentials = {
@@ -460,9 +465,10 @@ export function useRemoteLogHandler() {
       
       // 连接成功
       notifications.show({
-        title: t('remoteLogs.notifications.connected'),
-        message: t('remoteLogs.notifications.connectedDetail', { name: log.name }),
+        title: t('remoteLogs.notification.connected'),
+        message: t('remoteLogs.notification.connectedDetail', { name: log.name }),
         color: 'green',
+        autoClose: 3000 // 3秒后自动关闭
       });
       
       return true;
@@ -474,9 +480,10 @@ export function useRemoteLogHandler() {
       updateMonitoringStatus(log.id, false);
       
       notifications.show({
-        title: t('remoteLogs.errors.connectionFailed'),
+        title: t('remoteLogs.notification.error'),
         message: String(error),
         color: 'red',
+        autoClose: 3000 // 3秒后自动关闭
       });
       
       throw error;
@@ -530,9 +537,10 @@ export function useRemoteLogHandler() {
       }
       
       notifications.show({
-        title: t('remoteLogs.notifications.disconnected'),
-        message: t('remoteLogs.notifications.disconnectedDetail', { name: connection.name }),
+        title: t('remoteLogs.notification.disconnected'),
+        message: t('remoteLogs.notification.disconnectedDetail', { name: connection.name }),
         color: 'blue',
+        autoClose: 3000 // 3秒后自动关闭
       });
       
       return true;
@@ -540,9 +548,10 @@ export function useRemoteLogHandler() {
       console.error('断开远程日志连接失败:', error);
       
       notifications.show({
-        title: t('remoteLogs.errors.disconnectionFailed'),
+        title: t('remoteLogs.notification.error'),
         message: String(error),
         color: 'red',
+        autoClose: 3000 // 3秒后自动关闭
       });
       
       throw error;

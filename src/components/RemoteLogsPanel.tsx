@@ -744,18 +744,6 @@ export default function RemoteLogsPanel() {
         </Group>
       </Modal>
       
-      {/* 通知组件 */}
-      {notification && (
-        <Notification
-          color={notification.type === 'success' ? 'green' : notification.type === 'error' ? 'red' : 'blue'}
-          title={notification.type === 'success' ? t('common.success') : notification.type === 'error' ? t('common.error') : t('common.info')}
-          onClose={() => setNotification(null)}
-          withCloseButton
-          styles={{ root: { position: 'fixed', bottom: 20, right: 20, zIndex: 1000 } }}
-        >
-          {notification.message}
-        </Notification>
-      )}
     </>
   );
 }
