@@ -45,12 +45,14 @@ export default {
       title: '添加远程连接',
       type: '连接类型',
       name: '名称',
-      host: '主机地址',
+      host: '主机',
       port: '端口',
       sshKey: 'SSH 密钥路径',
       username: '用户名',
       password: '密码',
       authType: '认证类型',
+      passwordAuth: '密码认证',
+      keyAuth: '密钥认证',
       privateKey: '私钥',
       privateKeyPath: '私钥路径',
       passphrase: '密钥口令',
@@ -66,19 +68,16 @@ export default {
       inputPassphrase: '输入密钥口令（可选）',
       inputPort: '输入端口（默认：22）',
       inputLogFilePath: '输入日志文件路径',
+      editTitle: '编辑远程连接',
+      addTitle: '添加远程连接',
     },
     status: {
       connected: '已连接',
-      disconnected: '未连接',
+      disconnected: '已断开',
       error: '错误',
       connecting: '连接中',
     },
-    defaultNames: {
-      productionServer: '生产服务器',
-      messageQueue: '消息队列',
-      logStorage: '日志存储',
-    },
-    notifications: {
+    notification: {
       success: '成功',
       error: '错误',
       info: '信息',
@@ -90,14 +89,20 @@ export default {
     },
     content: {
       title: '日志内容',
-      empty: '暂无可用日志',
-      loading: '加载日志中...',
+      empty: '还没有远程连接。添加一个开始使用。',
+      loading: '正在加载日志...',
     },
-    buttons: {
+    actions: {
       connect: '连接',
       disconnect: '断开',
-      edit: '编辑连接',
-      delete: '删除连接',
+      edit: '编辑',
+      delete: '删除',
+      addConnection: '添加连接',
+    },
+    defaultNames: {
+      productionServer: '生产服务器',
+      messageQueue: '消息队列',
+      logStorage: '日志存储',
     },
   },
   chatHistory: {
@@ -137,11 +142,11 @@ export default {
   settings: {
     displaySettings: '显示设置',
     theme: {
-      darkMode: '夜间模式',
-      darkModeDescription: '切换深色/浅色主题',
       title: '主题',
       light: '浅色',
       dark: '深色',
+      darkMode: '夜间模式',
+      darkModeDescription: '切换深色/浅色主题',
     },
     autoRefresh: '自动刷新',
     autoRefreshDescription: '每5秒自动刷新日志内容',
@@ -192,7 +197,6 @@ export default {
       guest: '游客',
       loginTip: '请登录以使用更多功能'
     },
-
     apiUsage: {
       title: 'API 使用量',
       remaining: '剩余额度',
@@ -220,7 +224,6 @@ export default {
       creative: '创意',
       concise: '简洁',
     },
-
   },
   bottomMenu: {
     format: '格式',
@@ -228,4 +231,4 @@ export default {
     lines: '行数',
     encoding: '编码',
   },
-}; 
+};

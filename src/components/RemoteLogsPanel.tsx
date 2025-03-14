@@ -1,4 +1,4 @@
-import { Stack, Text, Paper, Group, ActionIcon, Button, Modal, Select, TextInput, Badge, Tabs, Notification } from '@mantine/core';
+import { Stack, Text, Paper, Group, Button, Modal, Select, TextInput, Badge, Tabs, Notification } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import { useState, useEffect } from 'react';
 import { 
@@ -16,7 +16,6 @@ import {
   IconPower,
   IconTowerOff,
 } from '@tabler/icons-react';
-import { IconServer2 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useLogContentStore } from '../stores/logContentStore';
 import { PasswordInput } from '@mantine/core';
@@ -111,6 +110,11 @@ export default function RemoteLogsPanel() {
     const typeConfig = REMOTE_TYPES.find(t => t.types.some(t => t.value === type));
     const Icon = typeConfig?.types.find(t => t.value === type)?.icon || IconCloud;
     return <Icon size={18} color={typeConfig?.types.find(t => t.value === type)?.color} />;
+  };
+
+  const getTypeColor = (type: string) => {
+    const typeConfig = REMOTE_TYPES.find(t => t.types.some(t => t.value === type));
+    return typeConfig?.types.find(t => t.value === type)?.color || '#868E96';
   };
 
   const getStatusColor = (status: string) => {
@@ -254,123 +258,197 @@ export default function RemoteLogsPanel() {
             {t('remoteLogs.title')}
           </Text>
           <Button 
-            variant="light" 
+            variant="filled" 
+            color="blue"
             size="xs"
             leftSection={<IconPlus size={14} />}
             onClick={() => setIsAddModalOpen(true)}
           >
-            {t('remoteLogs.addConnection')}
+            {t('remoteLogs.actions.addConnection')}
           </Button>
         </Group>
 
-        <Stack gap="md" px="md">
-          {logs.map((log) => (
+        <Stack gap="md" px="md" pb="md">
+          {logs.length === 0 ? (
             <Paper
-              key={log.id}
-              p="md"
+              p="xl"
               radius="md"
               style={{
-                backgroundColor: activeLogId === log.id ? (isDark ? '#2C2E33' : '#E9ECEF') : colors.cardBg,
-                border: `1px solid ${activeLogId === log.id ? '#228be6' : colors.border}`,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onClick={() => {
-                // 如果已连接，则仅设置为活跃状态
-                if (log.status === 'connected') {
-                  setActiveLogId(log.id);
-                  // 激活connection，更新LogContent显示
-                  activateConnection(log.id);
-                } else {
-                  // 未连接则先连接
-                  connectSsh(log);
-                }
+                backgroundColor: colors.cardBg,
+                border: `1px dashed ${colors.border}`,
+                textAlign: 'center',
               }}
             >
-              <Group justify="space-between" align="center" mb={4}>
-                <Group>
-                  {getTypeIcon(log.type)}
-                  <Text size="sm" fw={500}>{log.name}</Text>
-                </Group>
-                <Group>
-                  <Badge 
-                    size="sm" 
-                    color={getStatusColor(log.status)}
-                  >
-                    {log.status === 'connected' 
-                      ? t('remoteLogs.status.connected') 
-                      : log.status === 'disconnected' 
-                        ? t('remoteLogs.status.disconnected') 
-                        : t('remoteLogs.status.error')}
-                  </Badge>
-                  {log.status === 'disconnected' ? (
-                    <ActionIcon 
-                      color="blue" 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        connectSsh(log);
-                      }}
-                      loading={isConnecting}
-                      disabled={isConnecting}
-                    >
-                      <IconPower size={14} />
-                    </ActionIcon>
-                  ) : (
-                    <ActionIcon 
-                      color="red" 
-                      size="sm"
-                      onClick={() => disconnectSsh(log.id)}
-                    >
-                      <IconTowerOff size={14} />
-                    </ActionIcon>
-                  )}
-                  <ActionIcon 
-                    color="gray" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(log);
-                    }}
-                  >
-                    <IconPencil size={14} />
-                  </ActionIcon>
-                  <ActionIcon 
-                    color="red" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // 从本地状态中删除
-                      setLogs(logs.filter(l => l.id !== log.id));
-                      // 从持久化存储中删除
-                      deleteLog(log.id);
-                      
-                      if (activeLogId === log.id) {
-                        setActiveLogId(null);
-                        setGlobalLogContent('');
-                        setCurrentFileName('');
-                      }
-                    }}
-                  >
-                    <IconTrash size={14} />
-                  </ActionIcon>
-                </Group>
-              </Group>
-              
-              <Group gap={4}>
-                <IconServer2 size={14} color={isDark ? '#868E96' : '#ADB5BD'} />
-                <Text size="xs" c={isDark ? '#868E96' : '#6C757D'}>
-                  {log.host}{log.port ? `:${log.port}` : ''}
+              <Stack align="center" gap="xs">
+                <IconServer size={32} color={isDark ? '#5C5F66' : '#ADB5BD'} />
+                <Text size="sm" c={isDark ? '#5C5F66' : '#6C757D'}>
+                  {t('remoteLogs.content.empty')}
                 </Text>
-              </Group>
-              
-              {log.status === 'error' && log.message && (
-                <Text size="xs" c="red" mt={4}>
-                  {log.message}
-                </Text>
-              )}
+                <Button 
+                  variant="light" 
+                  color="blue"
+                  size="xs"
+                  leftSection={<IconPlus size={14} />}
+                  onClick={() => setIsAddModalOpen(true)}
+                  mt="sm"
+                >
+                  {t('remoteLogs.actions.addConnection')}
+                </Button>
+              </Stack>
             </Paper>
-          ))}
+          ) : (
+            logs.map((log) => (
+              <Paper
+                key={log.id}
+                p="md"
+                radius="md"
+                style={{
+                  backgroundColor: activeLogId === log.id ? (isDark ? '#2C2E33' : '#E9ECEF') : colors.cardBg,
+                  border: `1px solid ${activeLogId === log.id ? '#228be6' : colors.border}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onClick={() => {
+                  // 如果已连接，则仅设置为活跃状态
+                  if (log.status === 'connected') {
+                    setActiveLogId(log.id);
+                    // 激活connection，更新LogContent显示
+                    activateConnection(log.id);
+                  } else {
+                    // 未连接则先连接
+                    connectSsh(log);
+                  }
+                }}
+              >
+                <Stack gap={8}>
+                  {/* 标题和状态行 */}
+                  <Group justify="space-between" align="center">
+                    <Group gap={8}>
+                      <Badge 
+                        size="md" 
+                        color={getTypeColor(log.type)}
+                        variant="filled"
+                        radius="sm"
+                        leftSection={getTypeIcon(log.type)}
+                        style={{ textTransform: 'capitalize' }}
+                      >
+                        {log.type}
+                      </Badge>
+                      <Text fw={600} size="sm">{log.name}</Text>
+                    </Group>
+                    <Badge 
+                      size="sm" 
+                      color={getStatusColor(log.status)}
+                      variant={isDark ? "filled" : "light"}
+                      radius="sm"
+                    >
+                      {log.status === 'connected' 
+                        ? t('remoteLogs.status.connected') 
+                        : log.status === 'disconnected' 
+                          ? t('remoteLogs.status.disconnected') 
+                          : t('remoteLogs.status.error')}
+                    </Badge>
+                  </Group>
+                  
+                  {/* 主机信息 */}
+                  <Group gap={6}>
+                    <IconServer size={14} color={isDark ? '#868E96' : '#ADB5BD'} />
+                    <Text size="xs" c={isDark ? '#868E96' : '#6C757D'} fw={500}>
+                      {log.host}{log.port ? `:${log.port}` : ''}
+                    </Text>
+                  </Group>
+                  
+                  {/* 错误信息 */}
+                  {log.status === 'error' && log.message && (
+                    <Text size="xs" c="red" fw={500}>
+                      {log.message}
+                    </Text>
+                  )}
+                  
+                  {/* 操作按钮组 */}
+                  <Group justify="space-between" mt={8}>
+                    <Group gap={8}>
+                      {log.status === 'disconnected' ? (
+                        <Button
+                          variant="filled"
+                          color="blue"
+                          size="xs"
+                          leftSection={<IconPower size={14} />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            connectSsh(log);
+                          }}
+                          loading={isConnecting}
+                          disabled={isConnecting}
+                          title={t('remoteLogs.actions.connect')}
+                          radius="md"
+                        >
+                          {t('remoteLogs.actions.connect')}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="filled"
+                          color="red"
+                          size="xs"
+                          leftSection={<IconTowerOff size={14} />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            disconnectSsh(log.id);
+                          }}
+                          title={t('remoteLogs.actions.disconnect')}
+                          radius="md"
+                        >
+                          {t('remoteLogs.actions.disconnect')}
+                        </Button>
+                      )}
+                    </Group>
+                    
+                    <Group gap={8}>
+                      <Button
+                        variant="subtle"
+                        color="gray"
+                        size="xs"
+                        leftSection={<IconPencil size={14} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(log);
+                        }}
+                        title={t('remoteLogs.actions.edit')}
+                        radius="md"
+                      >
+                        {t('remoteLogs.actions.edit')}
+                      </Button>
+                      <Button
+                        variant="subtle"
+                        color="red"
+                        size="xs"
+                        leftSection={<IconTrash size={14} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // 从本地状态中删除
+                          setLogs(logs.filter(l => l.id !== log.id));
+                          // 从持久化存储中删除
+                          deleteLog(log.id);
+                          
+                          if (activeLogId === log.id) {
+                            setActiveLogId(null);
+                            setGlobalLogContent('');
+                            setCurrentFileName('');
+                          }
+                        }}
+                        title={t('remoteLogs.actions.delete')}
+                        radius="md"
+                      >
+                        {t('remoteLogs.actions.delete')}
+                      </Button>
+                    </Group>
+                  </Group>
+                </Stack>
+              </Paper>
+            ))
+          )}
         </Stack>
       </Stack>
 

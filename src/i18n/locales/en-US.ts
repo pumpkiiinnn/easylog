@@ -51,6 +51,8 @@ export default {
       username: 'Username',
       password: 'Password',
       authType: 'Authentication Type',
+      passwordAuth: 'Password Authentication',
+      keyAuth: 'Key Authentication',
       privateKey: 'Private Key',
       privateKeyPath: 'Private Key Path',
       passphrase: 'Passphrase',
@@ -65,6 +67,9 @@ export default {
       inputPrivateKeyPath: 'Enter private key path',
       inputPassphrase: 'Enter passphrase (optional)',
       inputPort: 'Enter port (default: 22)',
+      inputLogFilePath: 'Enter log file path',
+      editTitle: 'Edit Remote Connection',
+      addTitle: 'Add Remote Connection',
     },
     status: {
       connected: 'Connected',
@@ -72,7 +77,7 @@ export default {
       error: 'Error',
       connecting: 'Connecting',
     },
-    notifications: {
+    notification: {
       success: 'Success',
       error: 'Error',
       info: 'Information',
@@ -84,14 +89,15 @@ export default {
     },
     content: {
       title: 'Log Content',
-      empty: 'No logs available',
+      empty: 'No remote connections yet. Add one to get started.',
       loading: 'Loading logs...',
     },
-    buttons: {
+    actions: {
       connect: 'Connect',
       disconnect: 'Disconnect',
-      edit: 'Edit Connection',
-      delete: 'Delete Connection',
+      edit: 'Edit',
+      delete: 'Delete',
+      addConnection: 'Add Connection',
     },
     defaultNames: {
       productionServer: 'Production Server',
@@ -225,4 +231,4 @@ export default {
     lines: 'Lines',
     encoding: 'Encoding',
   },
-}; 
+};
