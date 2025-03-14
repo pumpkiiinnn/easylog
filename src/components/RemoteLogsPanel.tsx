@@ -1,6 +1,6 @@
 import { Stack, Text, Paper, Group, ActionIcon, Button, Modal, Select, TextInput, Badge, Tabs, Notification } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   IconPlus, 
   IconPencil, 
@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { useLogContentStore } from '../stores/logContentStore';
 import { PasswordInput } from '@mantine/core';
 import { RemoteLog, useRemoteLogHandler } from '../hooks/useRemoteLogHandler';
+import { useRemoteLogStore } from '../stores/remoteLogStore';
 
 export default function RemoteLogsPanel() {
   const { isDark } = useThemeStore();
@@ -34,6 +35,9 @@ export default function RemoteLogsPanel() {
     activateConnection,
     isConnecting
   } = useRemoteLogHandler();
+  
+  // 使用远程日志存储
+  const { logs: storedLogs, addLog, updateLog, deleteLog } = useRemoteLogStore();
   
   // 状态管理
   const [notification, setNotification] = useState<{type: 'success' | 'error' | 'info'; message: string} | null>(null);
@@ -80,11 +84,16 @@ export default function RemoteLogsPanel() {
     },
   ];
 
-  const [logs, setLogs] = useState<RemoteLog[]>([
-    { id: '1', name: t('remoteLogs.defaultNames.productionServer'), type: 'ssh', host: '192.168.1.100', status: 'connected' },
-    { id: '2', name: t('remoteLogs.defaultNames.messageQueue'), type: 'kafka', host: 'kafka.example.com', status: 'connected' },
-    { id: '3', name: t('remoteLogs.defaultNames.logStorage'), type: 'elasticsearch', host: 'es.example.com', status: 'error' },
-  ]);
+  // 使用存储的日志初始化状态
+  const [logs, setLogs] = useState<RemoteLog[]>([]);
+  
+  // 当存储的日志变化时更新本地状态
+  useEffect(() => {
+    if (storedLogs && storedLogs.length > 0) {
+      setLogs(storedLogs);
+    }
+  }, [storedLogs]);
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   // 设置默认使用password认证模式
   const [newLog, setNewLog] = useState<Partial<RemoteLog>>({ authType: 'password' });
@@ -134,7 +143,11 @@ export default function RemoteLogsPanel() {
         } : {})
       };
       
+      // 更新本地状态
       setLogs([...logs, newLogEntry]);
+      // 保存到持久化存储
+      addLog(newLogEntry);
+      
       setIsAddModalOpen(false);
       setNewLog({});
     }
@@ -211,6 +224,7 @@ export default function RemoteLogsPanel() {
   const saveEditedLog = () => {
     if (!editingLog) return;
     
+    // 更新本地状态
     setLogs(prevLogs => {
       return prevLogs.map(log => {
         if (log.id === editingLog.id) {
@@ -219,6 +233,9 @@ export default function RemoteLogsPanel() {
         return log;
       });
     });
+    
+    // 保存到持久化存储
+    updateLog(editingLog);
     
     setIsEditModalOpen(false);
     setEditingLog(null);
@@ -323,7 +340,11 @@ export default function RemoteLogsPanel() {
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
+                      // 从本地状态中删除
                       setLogs(logs.filter(l => l.id !== log.id));
+                      // 从持久化存储中删除
+                      deleteLog(log.id);
+                      
                       if (activeLogId === log.id) {
                         setActiveLogId(null);
                         setGlobalLogContent('');

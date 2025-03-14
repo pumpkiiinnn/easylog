@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { convertFileSrc } from '@tauri-apps/api/tauri';
 import { useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { isTauri } from '../utils/environment';

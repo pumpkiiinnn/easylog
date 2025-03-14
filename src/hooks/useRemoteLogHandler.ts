@@ -381,10 +381,11 @@ export function useRemoteLogHandler() {
       
       // 创建或更新连接记录
       const existingConnection = connections.find(c => c.id === log.id);
+      let currentConnection: RemoteLogConnection;
       
       if (!existingConnection) {
         // 创建新连接记录
-        const newConnection: RemoteLogConnection = {
+        currentConnection = {
           id: log.id,
           name: log.name,
           credentials: sshCredentials,
@@ -392,13 +393,17 @@ export function useRemoteLogHandler() {
           isMonitoring: false
         };
         
-        setConnections(prev => [...prev, newConnection]);
+        setConnections(prev => [...prev, currentConnection]);
       } else {
         // 更新现有连接记录
+        currentConnection = {
+          ...existingConnection,
+          credentials: sshCredentials,
+          name: log.name
+        };
+        
         setConnections(prev => prev.map(conn => 
-          conn.id === log.id ? 
-            { ...conn, credentials: sshCredentials, name: log.name } : 
-            conn
+          conn.id === log.id ? currentConnection : conn
         ));
       }
       
@@ -408,8 +413,71 @@ export function useRemoteLogHandler() {
       
       // 开始监控日志文件
       if (log.logFilePath) {
-        // 调用fetchRemoteLog来监控日志
-        await fetchRemoteLog(log.id, log.logFilePath, true);
+        // 不再依赖connections状态，而是直接使用当前连接对象
+        try {
+          setIsFetching(true);
+          console.log('获取远程日志:', { connectionId: log.id, logPath: log.logFilePath, follow: true });
+          
+          // 如果要实时监控，使用monitor_remote_log命令
+          console.log('调用monitor_remote_log前:', { 
+            credentials: {
+              ...sshCredentials,
+              // 为安全起见，不输出密码
+              ...(sshCredentials.auth_type === 'password' && { 
+                auth_type: sshCredentials.auth_type,
+                password: '***'
+              })
+            },
+            logPath: log.logFilePath,
+            credentialsType: typeof sshCredentials,
+            logPathType: typeof log.logFilePath
+          });
+          
+          const result = await invoke('monitor_remote_log', {
+            credentials: sshCredentials,
+            logPath: log.logFilePath
+          });
+          
+          // 详细记录返回结果
+          console.log('monitor_remote_log调用结果:', {
+            result,
+            resultType: typeof result,
+            isNull: result === null,
+            isUndefined: result === undefined,
+            stringified: JSON.stringify(result),
+            time: new Date().toISOString(),
+            connectionInfo: {
+              id: log.id,
+              name: log.name,
+              host: sshCredentials.host,
+              port: sshCredentials.port || 22,
+              username: sshCredentials.username,
+              authType: sshCredentials.auth_type
+            }
+          });
+          
+          // 设置当前文件名，使LogContent组件能够显示内容
+          setCurrentFileName(`${log.name}: ${log.logFilePath}`);
+          setGlobalFileName(`${log.name}: ${log.logFilePath}`);
+          // 初始化内容显示连接中信息
+          setContent('正在连接远程服务器并读取日志...');
+          setGlobalLogContent('正在连接远程服务器并读取日志...');
+          
+          // 更新连接状态
+          updateMonitoringStatus(log.id, true, log.logFilePath);
+          setActiveConnectionId(log.id);
+        } catch (error) {
+          console.error('monitor_remote_log调用失败:', error);
+          notifications.show({
+            title: t('remoteLogs.errors.monitoringFailed'),
+            message: String(error),
+            color: 'red',
+          });
+          updateConnectionStatus(log.id, 'error', String(error));
+          throw error;
+        } finally {
+          setIsFetching(false);
+        }
         
         updateConnectionStatus(log.id, 'connected');
         notifications.show({

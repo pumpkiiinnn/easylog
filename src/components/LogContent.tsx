@@ -1,4 +1,4 @@
-import { Paper, Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput, ActionIcon } from '@mantine/core';
+import { Text, ScrollArea, Stack, Group, Button, Box, Center, Loader, TextInput } from '@mantine/core';
 import { IconRefresh, IconDownload, IconFileImport, IconSearch } from '@tabler/icons-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { notifications } from '@mantine/notifications';
@@ -18,13 +18,16 @@ import { useTranslation } from 'react-i18next';
 
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
-  const { isLoading, currentFile, content: hookContent } = useFileHandler();
+  const { isLoading, currentFile, readFile } = useFileHandler();
   const { currentFileName, content: storeContent } = useLogContentStore();
-  const { styles, fontSize, searchText, setSearchText } = useLogSettingsStore();
+  const { styles, fontSize, searchText, setSearchText, autoScroll } = useLogSettingsStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [searchMatches, setSearchMatches] = useState<number[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const previousContentLength = useRef<number>(0);
+  const isScrolledToBottom = useRef<boolean>(true);
   const { height } = useViewportSize();
   const { isDark } = useThemeStore();
   const { t } = useTranslation();
@@ -52,13 +55,81 @@ export default function LogContent() {
     isLoading
   });
 
+  // 监听滚动事件，检测是否滚动到底部
+  useEffect(() => {
+    if (!viewportRef.current) return;
+    
+    const handleScroll = () => {
+      if (!viewportRef.current) return;
+      
+      const { scrollTop, scrollHeight, clientHeight } = viewportRef.current;
+      // 如果滚动位置距离底部小于 20px，认为已滚动到底部
+      const isBottom = scrollHeight - scrollTop - clientHeight < 20;
+      isScrolledToBottom.current = isBottom;
+      
+      console.log('滚动状态:', { 
+        scrollTop, 
+        scrollHeight, 
+        clientHeight, 
+        isBottom,
+        distanceFromBottom: scrollHeight - scrollTop - clientHeight
+      });
+    };
+    
+    const viewport = viewportRef.current;
+    viewport.addEventListener('scroll', handleScroll);
+    
+    // 初始化时检查一次滚动状态
+    handleScroll();
+    
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   // 监听 storeContent 变化，解析日志
   useEffect(() => {
     if (storeContent) {
       const logs = LogParser.parseLogContent(storeContent);
       setParsedLogs(logs);
+      
+      // 记录当前内容长度，用于后续判断内容是否有更新
+      const currentLength = storeContent.length;
+      
+      // 如果内容有更新（长度增加），并且启用了自动滚动或者用户已经滚动到底部，则滚动到底部
+      if (currentLength > previousContentLength.current && (autoScroll || isScrolledToBottom.current)) {
+        console.log('内容更新，准备自动滚动到底部', {
+          autoScroll,
+          isScrolledToBottom: isScrolledToBottom.current,
+          prevLength: previousContentLength.current,
+          currentLength
+        });
+        
+        scrollToBottom();
+      }
+      
+      previousContentLength.current = currentLength;
     }
-  }, [storeContent]);
+  }, [storeContent, autoScroll]);
+
+  // 滚动到底部的函数
+  const scrollToBottom = () => {
+    if (!viewportRef.current) return;
+    
+    // 使用 requestAnimationFrame 确保在 DOM 更新后执行滚动
+    requestAnimationFrame(() => {
+      if (viewportRef.current) {
+        console.log('执行滚动到底部', {
+          scrollHeight: viewportRef.current.scrollHeight
+        });
+        
+        viewportRef.current.scrollTo({
+          top: viewportRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    });
+  };
 
   // 计算搜索匹配项
   useEffect(() => {
@@ -106,53 +177,30 @@ export default function LogContent() {
   };
 
   // 处理文件的通用函数
-  const handleFiles = async (files: File[] | string[]) => {
-    console.log('Handling files:', files);
-    let logFiles;
-    
+  const handleFiles = async (files: string[] | File[]) => {
     try {
+      if (files.length === 0) return;
+      
       if (typeof files[0] === 'string') {
-        console.log('Tauri environment detected');
-        logFiles = (files as string[]).filter(file => 
-          file.toLowerCase().endsWith('.log') || 
-          file.toLowerCase().endsWith('.txt') ||
-          file.toLowerCase().endsWith('.json')
-        );
-        console.log('Filtered log files:', logFiles);
-        if (logFiles.length > 0) {
-          await readFile({ path: logFiles[0] }).catch(error => {
-            throw new Error(`${t('logContent.errors.readError')}: ${error.message}`);
-          });
-        }
+        // Tauri 环境，文件路径是字符串
+        await readFile({ path: files[0] });
       } else {
-        // 网页环境
-        logFiles = (files as File[]).filter(file => 
-          file.name.toLowerCase().endsWith('.log') || 
-          file.name.toLowerCase().endsWith('.txt') ||
-          file.name.toLowerCase().endsWith('.json')
-        );
-        if (logFiles.length > 0) {
-          await readFile({ path: URL.createObjectURL(logFiles[0]) }).catch(error => {
-            throw new Error(`${t('logContent.errors.readError')}: ${error.message}`);
-          });
-        }
-      }
-
-      if (logFiles.length === 0) {
-        console.log('No valid files found');
+        // Web 环境，文件是 File 对象
+        const file = files[0] as File;
+        // 读取文件内容但不直接使用，因为在Web环境中我们依赖其他机制来处理文件
+        await file.text(); // 不存储结果，避免未使用变量警告
         notifications.show({
-          title: t('logContent.errors.invalidType'),
-          message: t('logContent.errors.validFileTypes'),
-          color: 'red'
+          title: t('logContent.fileLoaded'),
+          message: file.name,
+          color: 'green',
         });
       }
-    } catch (error) {
-      console.error('Error handling files:', error);
+    } catch (error: any) {
+      console.error('处理文件失败:', error);
       notifications.show({
-        title: t('logContent.errors.uploadError'),
-        message: error instanceof Error ? error.message : t('logContent.errors.unknownError'),
+        title: t('logContent.errors.fileLoadFailed'),
+        message: error.message || String(error),
         color: 'red',
-        autoClose: 5000
       });
     }
   };
@@ -380,11 +428,18 @@ export default function LogContent() {
         ) : (
           <ScrollArea 
             ref={scrollAreaRef}
-            h={`calc(${height}px - 180px)`}
+            viewportRef={viewportRef}
+            h={`calc(${height}px - 190px)`}
             type="hover"
             data-log-content="true"
+            onScrollPositionChange={({ y }) => {
+              if (!viewportRef.current) return;
+              const { scrollHeight, clientHeight } = viewportRef.current;
+              // 如果滚动位置距离底部小于 20px，认为已滚动到底部
+              isScrolledToBottom.current = scrollHeight - y - clientHeight < 20;
+            }}
           >
-            <Stack gap={0} p="md">
+            <Stack gap={0} p="md" pb="xl">
               {parsedLogs.map(renderLogEntry)}
             </Stack>
           </ScrollArea>
@@ -394,4 +449,4 @@ export default function LogContent() {
       <TextSelectionPopover onSubmit={handleAIInteraction} />
     </Stack>
   );
-} 
+}
