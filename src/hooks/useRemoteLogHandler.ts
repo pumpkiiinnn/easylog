@@ -1,10 +1,13 @@
 import { listen } from '@tauri-apps/api/event';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useLogContentStore } from '../stores/logContentStore';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 import type { UnlistenFn } from '@tauri-apps/api/event';
+
+// 全局变量，用于跟踪事件监听器是否已设置
+let isListenerSetup = false;
 
 export interface AuthMethod {
   auth_type: 'password' | 'key';
@@ -40,7 +43,6 @@ export interface RemoteLogConnection {
 
 export interface LogStreamData {
   content: string;
-  timestamp: number;
 }
 
 export interface RemoteLog {
@@ -61,6 +63,10 @@ export interface RemoteLog {
 }
 
 export function useRemoteLogHandler() {
+  // 使用 useRef 存储最新的状态值，避免事件监听器中的闭包问题
+  const connectionsRef = useRef<RemoteLogConnection[]>([]);
+  const activeConnectionIdRef = useRef<string | null>(null);
+
   const [connections, setConnections] = useState<RemoteLogConnection[]>([]);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -72,12 +78,32 @@ export function useRemoteLogHandler() {
   const { setLogContent: setGlobalLogContent, setCurrentFileName: setGlobalFileName } = useLogContentStore();
   const { t } = useTranslation();
 
+  // 同步 ref 值
+  useEffect(() => {
+    connectionsRef.current = connections;
+  }, [connections]);
+  
+  useEffect(() => {
+    activeConnectionIdRef.current = activeConnectionId;
+  }, [activeConnectionId]);
+  
   // 设置事件监听器
   useEffect(() => {
+    // 如果已经设置过监听器，则直接返回
+    if (isListenerSetup) {
+      console.log('事件监听器已经设置，跳过重复设置');
+      return;
+    }
+    
+    // 标记监听器已设置
+    isListenerSetup = true;
+    
     const unlisteners: UnlistenFn[] = [];
     
     const setupListeners = async () => {
       try {
+        console.log('设置远程日志事件监听器...');
+        
         // 监听SSH连接状态
         const connectionStatusListener = await listen('ssh-connection-status', (event: any) => {
           const { id, connected, message } = event.payload;
@@ -90,7 +116,7 @@ export function useRemoteLogHandler() {
             notifications.show({
               title: t('remoteLogs.notifications.connected'),
               message: t('remoteLogs.notifications.connectedDetail', { 
-                name: connections.find(c => c.id === id)?.name || id 
+                name: connectionsRef.current.find(c => c.id === id)?.name || id 
               }),
               color: 'green',
             });
@@ -111,9 +137,9 @@ export function useRemoteLogHandler() {
           console.log('SSH日志连接成功:', logPath);
           
           // 如果有活跃连接，更新其状态
-          if (activeConnectionId) {
-            updateConnectionStatus(activeConnectionId, 'connected');
-            updateMonitoringStatus(activeConnectionId, true, logPath);
+          if (activeConnectionIdRef.current) {
+            updateConnectionStatus(activeConnectionIdRef.current, 'connected');
+            updateMonitoringStatus(activeConnectionIdRef.current, true, logPath);
           }
         });
         unlisteners.push(logConnectedListener);
@@ -124,7 +150,7 @@ export function useRemoteLogHandler() {
           console.log('SSH日志连接断开:', logPath);
           
           // 查找匹配的连接并更新其状态
-          connections.forEach(conn => {
+          connectionsRef.current.forEach(conn => {
             if (conn.logPath === logPath) {
               updateConnectionStatus(conn.id, 'disconnected');
               updateMonitoringStatus(conn.id, false);
@@ -135,7 +161,7 @@ export function useRemoteLogHandler() {
         
         // 监听SSH日志数据
         const logDataListener = await listen('ssh-log-data', (event: any) => {
-          const { content: logContent, source, timestamp } = event.payload;
+          const { content: logContent, source } = event.payload;
           console.log('收到SSH日志数据:', { source, contentLength: logContent?.length });
           
           if (!source || !logContent) {
@@ -144,7 +170,7 @@ export function useRemoteLogHandler() {
           }
           
           // 查找与日志路径匹配的连接
-          const connection = connections.find(conn => conn.logPath === source);
+          const connection = connectionsRef.current.find(conn => conn.logPath === source);
           if (!connection) {
             console.warn('找不到匹配的连接:', source);
             return;
@@ -156,7 +182,7 @@ export function useRemoteLogHandler() {
             const newContent = [...prevContent, logContent];
             
             // 如果是当前活跃的连接，则更新LogContent组件
-            if (connection.id === activeConnectionId) {
+            if (connection.id === activeConnectionIdRef.current) {
               setGlobalLogContent(newContent.join('\n'));
               setGlobalFileName(`${connection.name}: ${source}`);
               setContent(newContent.join('\n'));
@@ -183,9 +209,9 @@ export function useRemoteLogHandler() {
           });
           
           // 如果有活跃连接，更新其状态为错误
-          if (activeConnectionId) {
-            updateConnectionStatus(activeConnectionId, 'error', errorMessage);
-            updateMonitoringStatus(activeConnectionId, false);
+          if (activeConnectionIdRef.current) {
+            updateConnectionStatus(activeConnectionIdRef.current, 'error', errorMessage);
+            updateMonitoringStatus(activeConnectionIdRef.current, false);
           }
         });
         unlisteners.push(logErrorListener);
@@ -200,9 +226,10 @@ export function useRemoteLogHandler() {
     
     // 清理函数
     return () => {
+      console.log('清理远程日志事件监听器...');
       unlisteners.forEach(unlisten => unlisten());
     };
-  }, [connections, activeConnectionId, t]);
+  }, []); // 空依赖数组，确保事件监听器只注册一次
 
   // 更新连接状态
   const updateConnectionStatus = useCallback((id: string, status: RemoteLogConnection['status'], error?: string) => {
@@ -239,7 +266,7 @@ export function useRemoteLogHandler() {
   // 获取远程日志
   const fetchRemoteLog = async (connectionId: string, logPath: string, follow = false) => {
     try {
-      const connection = connections.find(conn => conn.id === connectionId);
+      const connection = connectionsRef.current.find(conn => conn.id === connectionId);
       if (!connection) {
         throw new Error(t('remoteLogs.errors.connectionNotFound'));
       }
@@ -380,7 +407,7 @@ export function useRemoteLogHandler() {
       };
       
       // 创建或更新连接记录
-      const existingConnection = connections.find(c => c.id === log.id);
+      const existingConnection = connectionsRef.current.find(c => c.id === log.id);
       let currentConnection: RemoteLogConnection;
       
       if (!existingConnection) {
@@ -399,100 +426,52 @@ export function useRemoteLogHandler() {
         currentConnection = {
           ...existingConnection,
           credentials: sshCredentials,
-          name: log.name
+          status: 'disconnected'
         };
         
-        setConnections(prev => prev.map(conn => 
-          conn.id === log.id ? currentConnection : conn
-        ));
+        setConnections(prev => 
+          prev.map(c => c.id === log.id ? currentConnection : c)
+        );
       }
       
-      // 测试SSH连接
-      await invoke('test_ssh_connection', { credentials: sshCredentials });
-      console.log('SSH连接测试成功');
+      // 清空之前的日志内容
+      clearConnectionLogs(log.id);
       
-      // 开始监控日志文件
-      if (log.logFilePath) {
-        // 不再依赖connections状态，而是直接使用当前连接对象
-        try {
-          setIsFetching(true);
-          console.log('获取远程日志:', { connectionId: log.id, logPath: log.logFilePath, follow: true });
-          
-          // 如果要实时监控，使用monitor_remote_log命令
-          console.log('调用monitor_remote_log前:', { 
-            credentials: {
-              ...sshCredentials,
-              // 为安全起见，不输出密码
-              ...(sshCredentials.auth_type === 'password' && { 
-                auth_type: sshCredentials.auth_type,
-                password: '***'
-              })
-            },
-            logPath: log.logFilePath,
-            credentialsType: typeof sshCredentials,
-            logPathType: typeof log.logFilePath
-          });
-          
-          const result = await invoke('monitor_remote_log', {
-            credentials: sshCredentials,
-            logPath: log.logFilePath
-          });
-          
-          // 详细记录返回结果
-          console.log('monitor_remote_log调用结果:', {
-            result,
-            resultType: typeof result,
-            isNull: result === null,
-            isUndefined: result === undefined,
-            stringified: JSON.stringify(result),
-            time: new Date().toISOString(),
-            connectionInfo: {
-              id: log.id,
-              name: log.name,
-              host: sshCredentials.host,
-              port: sshCredentials.port || 22,
-              username: sshCredentials.username,
-              authType: sshCredentials.auth_type
-            }
-          });
-          
-          // 设置当前文件名，使LogContent组件能够显示内容
-          setCurrentFileName(`${log.name}: ${log.logFilePath}`);
-          setGlobalFileName(`${log.name}: ${log.logFilePath}`);
-          // 初始化内容显示连接中信息
-          setContent('正在连接远程服务器并读取日志...');
-          setGlobalLogContent('正在连接远程服务器并读取日志...');
-          
-          // 更新连接状态
-          updateMonitoringStatus(log.id, true, log.logFilePath);
-          setActiveConnectionId(log.id);
-        } catch (error) {
-          console.error('monitor_remote_log调用失败:', error);
-          notifications.show({
-            title: t('remoteLogs.errors.monitoringFailed'),
-            message: String(error),
-            color: 'red',
-          });
-          updateConnectionStatus(log.id, 'error', String(error));
-          throw error;
-        } finally {
-          setIsFetching(false);
-        }
-        
-        updateConnectionStatus(log.id, 'connected');
-        notifications.show({
-          title: t('remoteLogs.notifications.connected'),
-          message: t('remoteLogs.notifications.connectedDetail', { name: log.name }),
-          color: 'green',
-        });
-      } else {
-        throw new Error(t('remoteLogs.errors.noLogFilePath'));
-      }
+      // 设置为活跃连接
+      setActiveConnectionId(log.id);
+      
+      // 获取日志路径
+      const logPath = log.logFilePath || '/var/log/syslog';
+      
+      // 更新连接状态
+      updateConnectionStatus(log.id, 'connected');
+      updateMonitoringStatus(log.id, true);
+      
+      // 保存日志路径到连接记录
+      setConnections(prev => 
+        prev.map(c => c.id === log.id ? { ...c, logPath } : c)
+      );
+      
+      // 调用Rust函数开始监控日志
+      await invoke('monitor_remote_log', {
+        credentials: sshCredentials,
+        logPath
+      });
+      
+      // 连接成功
+      notifications.show({
+        title: t('remoteLogs.notifications.connected'),
+        message: t('remoteLogs.notifications.connectedDetail', { name: log.name }),
+        color: 'green',
+      });
       
       return true;
     } catch (error) {
-      console.error('连接远程日志失败:', error);
+      console.error('连接到远程日志失败:', error);
+      
+      // 更新连接状态为错误
       updateConnectionStatus(log.id, 'error', String(error));
+      updateMonitoringStatus(log.id, false);
       
       notifications.show({
         title: t('remoteLogs.errors.connectionFailed'),
@@ -506,12 +485,21 @@ export function useRemoteLogHandler() {
     }
   };
 
+  // 清空指定连接的日志内容
+  const clearConnectionLogs = (id: string) => {
+    setLogContent(prev => {
+      const newLogContent = { ...prev };
+      delete newLogContent[id];
+      return newLogContent;
+    });
+  };
+
   // 断开远程日志连接
   const disconnectRemoteLog = async (id: string) => {
     try {
       console.log('断开远程日志连接:', id);
       
-      const connection = connections.find(conn => conn.id === id);
+      const connection = connectionsRef.current.find(conn => conn.id === id);
       if (!connection) {
         throw new Error(t('remoteLogs.errors.connectionNotFound'));
       }
@@ -528,11 +516,14 @@ export function useRemoteLogHandler() {
         port: connection.credentials.port
       });
       
+      // 清空该连接的日志内容
+      clearConnectionLogs(id);
+      
       updateConnectionStatus(id, 'disconnected');
       updateMonitoringStatus(id, false);
       
       // 如果当前活跃的连接是被断开的连接，则清理LogContent状态
-      if (activeConnectionId === id) {
+      if (activeConnectionIdRef.current === id) {
         setActiveConnectionId(null);
         setGlobalLogContent('');
         setGlobalFileName('');
@@ -577,7 +568,7 @@ export function useRemoteLogHandler() {
 
   // 激活指定连接
   const activateConnection = (id: string) => {
-    const connection = connections.find(conn => conn.id === id);
+    const connection = connectionsRef.current.find(conn => conn.id === id);
     if (!connection) {
       console.warn('尝试激活不存在的连接:', id);
       return false;
