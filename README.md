@@ -15,3 +15,6 @@
 ```bash
 cargo tauri dev
 ```
+```bash
+npm run tauri dev
+```
