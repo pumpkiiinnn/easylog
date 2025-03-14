@@ -522,8 +522,11 @@ export function useRemoteLogHandler() {
         return;
       }
       
-      // 停止日志流
-      await invoke('stop_log_stream', { id: connection.logPath });
+      // 停止日志流 - 修复参数，传递 host 和 port
+      await invoke('stop_log_stream', { 
+        host: connection.credentials.host,
+        port: connection.credentials.port
+      });
       
       updateConnectionStatus(id, 'disconnected');
       updateMonitoringStatus(id, false);

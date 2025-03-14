@@ -9,6 +9,21 @@ use std::sync::Mutex;
 use tauri::Manager;
 use tokio;
 use tauri::Emitter;
+use std::collections::HashMap;
+use std::sync::Arc;
+use lazy_static::lazy_static;
+
+// 定义活跃连接管理器结构
+#[derive(Debug, Default)]
+struct ActiveConnections {
+    // 使用(host, port)作为键
+    connections: HashMap<(String, u16), String>, // 值为log_path，用于识别连接
+}
+
+// 使用lazy_static创建全局的活跃连接管理器
+lazy_static! {
+    static ref ACTIVE_CONNECTIONS: Arc<Mutex<ActiveConnections>> = Arc::new(Mutex::new(ActiveConnections::default()));
+}
 
 // 初始化日志系统的函数
 fn setup_logging() {
@@ -321,18 +336,40 @@ async fn read_remote_log(credentials: SshCredentials, options: LogStreamOptions)
 async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, log_path: String) -> Result<(), String> {
     info!("Starting remote log monitoring for: {} on {}", log_path, credentials.host);
     
+    let port = credentials.port.unwrap_or(22);
+    let conn_key = (credentials.host.clone(), port);
+    
+    // 检查是否已有相同服务器的连接
+    {
+        let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+        if let Some(existing_log_path) = connections.connections.get(&conn_key) {
+            let err_msg = format!("已存在到服务器 {}:{} 的连接，正在监控日志: {}", conn_key.0, conn_key.1, existing_log_path);
+            error!("{}", err_msg);
+            // 移除旧连接
+            connections.connections.remove(&conn_key);
+        }
+
+        // 添加到活跃连接列表
+        connections.connections.insert(conn_key.clone(), log_path.clone());
+    }
+    
     // 克隆window以便在tokio线程中使用
     let window_clone = window.clone();
+    let host = credentials.host.clone();
     
     // 使用tokio线程来处理实时日志监控
     tokio::spawn(async move {
         // 创建TCP连接
-        let tcp = match std::net::TcpStream::connect(format!("{}:{}", credentials.host, credentials.port.unwrap_or(22))) {
+        let tcp = match std::net::TcpStream::connect(format!("{}:{}", credentials.host, port)) {
             Ok(s) => s,
             Err(e) => {
                 let err_msg = format!("无法连接到服务器: {}", e);
                 error!("{}", err_msg);
                 let _ = window_clone.emit("ssh-log-error", err_msg);
+                
+                // 从活跃连接中移除
+                let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+                connections.connections.remove(&conn_key);
                 return;
             }
         };
@@ -344,6 +381,10 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
                 let err_msg = format!("创建SSH会话失败: {}", e);
                 error!("{}", err_msg);
                 let _ = window_clone.emit("ssh-log-error", err_msg);
+                
+                // 从活跃连接中移除
+                let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+                connections.connections.remove(&conn_key);
                 return;
             }
         };
@@ -353,6 +394,10 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
             let err_msg = format!("SSH握手失败: {}", e);
             error!("{}", err_msg);
             let _ = window_clone.emit("ssh-log-error", err_msg);
+            
+            // 从活跃连接中移除
+            let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+            connections.connections.remove(&conn_key);
             return;
         }
         
@@ -377,6 +422,10 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
             let err_msg = format!("SSH认证失败: {}", e);
             error!("{}", err_msg);
             let _ = window_clone.emit("ssh-log-error", err_msg);
+            
+            // 从活跃连接中移除
+            let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+            connections.connections.remove(&conn_key);
             return;
         }
         
@@ -387,6 +436,10 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
                 let err_msg = format!("无法创建SSH通道: {}", e);
                 error!("{}", err_msg);
                 let _ = window_clone.emit("ssh-log-error", err_msg);
+                
+                // 从活跃连接中移除
+                let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+                connections.connections.remove(&conn_key);
                 return;
             }
         };
@@ -398,6 +451,10 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
             let err_msg = format!("执行命令失败: {}", e);
             error!("{}", err_msg);
             let _ = window_clone.emit("ssh-log-error", err_msg);
+            
+            // 从活跃连接中移除
+            let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+            connections.connections.remove(&conn_key);
             return;
         }
         
@@ -421,6 +478,15 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
         info!("Session set to non-blocking mode, starting read loop");
         
         loop {
+            // 检查连接是否应该停止（被其他请求取消）
+            {
+                let connections = ACTIVE_CONNECTIONS.lock().unwrap();
+                if !connections.connections.contains_key(&conn_key) {
+                    info!("连接已被请求停止: {}:{} for {}", conn_key.0, conn_key.1, log_path);
+                    break;
+                }
+            }
+            
             match channel.read(&mut buffer) {
                 Ok(bytes_read) => {
                     if bytes_read == 0 {
@@ -513,9 +579,15 @@ async fn monitor_remote_log(window: tauri::Window, credentials: SshCredentials, 
             }
         }
         
+        // 从活跃连接中移除
+        {
+            let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+            connections.connections.remove(&conn_key);
+        }
+        
         // 通知前端监控已结束
         let _ = window_clone.emit("ssh-log-disconnected", log_path);
-        info!("Remote log monitoring ended");
+        info!("Remote log monitoring ended for {}:{}", host, port);
     });
     
     Ok(())
@@ -529,6 +601,34 @@ async fn stop_remote_log_monitor(window: tauri::Window, log_path: String) -> Res
     // 发送一个事件通知前端连接已关闭
     let _ = window.emit("ssh-log-monitor-stopped", log_path);
     
+    Ok(())
+}
+
+// 停止指定服务器的日志流
+#[tauri::command]
+async fn stop_log_stream(window: tauri::Window, host: String, port: Option<u16>) -> Result<(), String> {
+    let port = port.unwrap_or(22);
+    let conn_key = (host.clone(), port);
+    
+    info!("尝试停止服务器 {}:{} 的日志流", host, port);
+    
+    // 从活跃连接中移除
+    let log_path;
+    {
+        let mut connections = ACTIVE_CONNECTIONS.lock().unwrap();
+        if let Some(path) = connections.connections.remove(&conn_key) {
+            log_path = path;
+            info!("已移除服务器 {}:{} 的连接", host, port);
+        } else {
+            return Err(format!("未找到服务器 {}:{} 的活跃连接", host, port));
+        }
+    }
+    
+    // 通知前端连接已关闭
+    let _ = window.emit("ssh-log-monitor-stopped", &log_path);
+    let _ = window.emit("ssh-log-disconnected", &log_path);
+    
+    info!("成功停止服务器 {}:{} 的日志流，日志路径: {}", host, port, log_path);
     Ok(())
 }
 
@@ -674,6 +774,7 @@ pub fn run() {
             read_remote_log,
             monitor_remote_log,
             stop_remote_log_monitor,
+            stop_log_stream,
             validate_ssh_logs
         ])
         .setup(|app| {
