@@ -18,3 +18,8 @@ cargo tauri dev
 ```bash
 npm run tauri dev
 ```
+
+打包📦
+```angular2html
+npm run tauri build
+```
