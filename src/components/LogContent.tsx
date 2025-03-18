@@ -98,13 +98,6 @@ export default function LogContent() {
       
       // 如果内容有更新（长度增加），并且启用了自动滚动或者用户已经滚动到底部，则滚动到底部
       if (currentLength > previousContentLength.current && (autoScroll || isScrolledToBottom.current)) {
-        console.log('内容更新，准备自动滚动到底部', {
-          autoScroll,
-          isScrolledToBottom: isScrolledToBottom.current,
-          prevLength: previousContentLength.current,
-          currentLength
-        });
-        
         scrollToBottom();
       }
       
