@@ -48,13 +48,6 @@ export default function LogContent() {
     });
   }, [storeContent, currentFileName]);
 
-  // 检查 currentFile 是否存在
-  console.log('Current file state:', {
-    currentFile,
-    hasStoreContent: Boolean(storeContent),
-    isLoading
-  });
-
   // 监听滚动事件，检测是否滚动到底部
   useEffect(() => {
     if (!viewportRef.current) return;
