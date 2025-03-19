@@ -15,6 +15,7 @@ import {
   IconBrandMysql,
   IconPower,
   IconTowerOff,
+  IconSearch,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useLogContentStore } from '../stores/logContentStore';
@@ -44,6 +45,7 @@ export default function RemoteLogsPanel() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<RemoteLog | null>(null);
   const [activeLogId, setActiveLogId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // 将 REMOTE_TYPES 移到组件内部，这样可以使用 t 函数
   const REMOTE_TYPES = [
@@ -250,14 +252,30 @@ export default function RemoteLogsPanel() {
     return REMOTE_TYPES.flatMap(category => category.types);
   };
 
+  // 过滤日志列表
+  const filteredLogs = logs.filter(log => {
+    if (!searchQuery) return true;
+    
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return (
+      log.name.toLowerCase().includes(lowerCaseQuery) ||
+      log.host.toLowerCase().includes(lowerCaseQuery) ||
+      log.type.toLowerCase().includes(lowerCaseQuery)
+    );
+  });
+
   return (
     <>
       <Stack gap="md">
         <Group justify="space-between" px="md" py="xs">
-          <Text fw={500} size="sm" c={colors.text}>
-            <IconServer size={16} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-            {t('remoteLogs.title')}
-          </Text>
+          <TextInput
+            placeholder={t('remoteLogs.search')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            size="xs"
+            leftSection={<IconSearch size={14} />}
+            style={{ flex: 1 }}
+          />
           <Button 
             variant="filled" 
             color="blue"
@@ -297,8 +315,34 @@ export default function RemoteLogsPanel() {
                 </Button>
               </Stack>
             </Paper>
+          ) : filteredLogs.length === 0 ? (
+            <Paper
+              p="xl"
+              radius="md"
+              style={{
+                backgroundColor: colors.cardBg,
+                border: `1px dashed ${colors.border}`,
+                textAlign: 'center',
+              }}
+            >
+              <Stack align="center" gap="xs">
+                <IconSearch size={32} color={isDark ? '#5C5F66' : '#ADB5BD'} />
+                <Text size="sm" c={isDark ? '#5C5F66' : '#6C757D'}>
+                  {t('remoteLogs.content.noSearchResults')}
+                </Text>
+                <Button 
+                  variant="light" 
+                  color="gray"
+                  size="xs"
+                  onClick={() => setSearchQuery('')}
+                  mt="sm"
+                >
+                  {t('remoteLogs.actions.clearSearch')}
+                </Button>
+              </Stack>
+            </Paper>
           ) : (
-            logs.map((log) => (
+            filteredLogs.map((log) => (
               <Paper
                 key={log.id}
                 p="md"
@@ -325,93 +369,24 @@ export default function RemoteLogsPanel() {
               >
                 <Stack gap={8}>
                   {/* 标题和状态行 */}
-                  <Group justify="space-between" align="center">
-                    <Group gap={8}>
-                      <Badge 
-                        size="md" 
-                        color={getTypeColor(log.type)}
-                        variant="filled"
-                        radius="sm"
-                        leftSection={getTypeIcon(log.type)}
-                        style={{ textTransform: 'capitalize' }}
-                      >
-                        {log.type}
-                      </Badge>
-                      <Text fw={600} size="sm">{log.name}</Text>
-                    </Group>
+                  <Group justify="flex-start" align="center" style={{ flexWrap: 'nowrap' }}>
                     <Badge 
-                      size="sm" 
-                      color={getStatusColor(log.status)}
-                      variant={isDark ? "filled" : "light"}
+                      size="md" 
+                      color={getTypeColor(log.type)}
+                      variant="filled"
                       radius="sm"
+                      style={{ textTransform: 'capitalize' }}
                     >
-                      {log.status === 'connected' 
-                        ? t('remoteLogs.status.connected') 
-                        : log.status === 'disconnected' 
-                          ? t('remoteLogs.status.disconnected') 
-                          : t('remoteLogs.status.error')}
+                      {log.type}
                     </Badge>
-                  </Group>
-                  
-                  {/* 主机信息 */}
-                  <Group gap={6}>
-                    <IconServer size={14} color={isDark ? '#868E96' : '#ADB5BD'} />
-                    <Text size="xs" c={isDark ? '#868E96' : '#6C757D'} fw={500}>
-                      {log.host}{log.port ? `:${log.port}` : ''}
-                    </Text>
-                  </Group>
-                  
-                  {/* 错误信息 */}
-                  {log.status === 'error' && log.message && (
-                    <Text size="xs" c="red" fw={500}>
-                      {log.message}
-                    </Text>
-                  )}
-                  
-                  {/* 操作按钮组 */}
-                  <Group justify="space-between" mt={8}>
-                    <Group gap={8}>
-                      {log.status === 'disconnected' ? (
-                        <Button
-                          variant="filled"
-                          color="blue"
-                          size="xs"
-                          leftSection={<IconPower size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            connectSsh(log);
-                          }}
-                          loading={isConnecting}
-                          disabled={isConnecting}
-                          title={t('remoteLogs.actions.connect')}
-                          radius="md"
-                        >
-                          {t('remoteLogs.actions.connect')}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="filled"
-                          color="red"
-                          size="xs"
-                          leftSection={<IconTowerOff size={14} />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            disconnectSsh(log.id);
-                          }}
-                          title={t('remoteLogs.actions.disconnect')}
-                          radius="md"
-                        >
-                          {t('remoteLogs.actions.disconnect')}
-                        </Button>
-                      )}
-                    </Group>
-                    
-                    <Group gap={8}>
+                
+                    <Group gap={4} style={{ marginLeft: 'auto' }}>
                       <Button
                         variant="subtle"
                         color="gray"
                         size="xs"
-                        leftSection={<IconPencil size={14} />}
+                        p={0}
+                        style={{ width: '28px', height: '28px', minWidth: 'auto' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           openEditModal(log);
@@ -419,13 +394,14 @@ export default function RemoteLogsPanel() {
                         title={t('remoteLogs.actions.edit')}
                         radius="md"
                       >
-                        {t('remoteLogs.actions.edit')}
+                        <IconPencil size={14} />
                       </Button>
                       <Button
                         variant="subtle"
                         color="red"
                         size="xs"
-                        leftSection={<IconTrash size={14} />}
+                        p={0}
+                        style={{ width: '28px', height: '28px', minWidth: 'auto' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           // 从本地状态中删除
@@ -442,9 +418,63 @@ export default function RemoteLogsPanel() {
                         title={t('remoteLogs.actions.delete')}
                         radius="md"
                       >
-                        {t('remoteLogs.actions.delete')}
+                        <IconTrash size={14} />
                       </Button>
                     </Group>
+                  </Group>
+                  <Text fw={600} size="sm" style={{ wordBreak: 'break-word', flex: 1 }}>{log.name}</Text>
+                  {/* 主机信息 */}
+                  <Group gap={6}>
+                    <IconServer size={14} color={isDark ? '#868E96' : '#ADB5BD'} />
+                    <Text size="xs" c={isDark ? '#868E96' : '#6C757D'} fw={500}>
+                      {log.host}{log.port ? `:${log.port}` : ''}
+                    </Text>
+                  </Group>
+                  
+                  {/* 错误信息 */}
+                  {log.status === 'error' && log.message && (
+                    <Text size="xs" c={getStatusColor(log.status)} fw={500}>
+                      {log.message}
+                    </Text>
+                  )}
+                  
+                  {/* 操作按钮组 - 只保留连接/断开连接按钮 */}
+                  <Group justify="center" mt={8}>
+                    {log.status === 'disconnected' ? (
+                      <Button
+                        variant="filled"
+                        color="blue"
+                        size="xs"
+                        leftSection={<IconPower size={14} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          connectSsh(log);
+                        }}
+                        loading={isConnecting}
+                        disabled={isConnecting}
+                        title={t('remoteLogs.actions.connect')}
+                        radius="md"
+                        fullWidth
+                      >
+                        {t('remoteLogs.actions.connect')}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="filled"
+                        color="red"
+                        size="xs"
+                        leftSection={<IconTowerOff size={14} />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          disconnectSsh(log.id);
+                        }}
+                        title={t('remoteLogs.actions.disconnect')}
+                        radius="md"
+                        fullWidth
+                      >
+                        {t('remoteLogs.actions.disconnect')}
+                      </Button>
+                    )}
                   </Group>
                 </Stack>
               </Paper>

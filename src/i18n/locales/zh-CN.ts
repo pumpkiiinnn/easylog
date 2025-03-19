@@ -26,6 +26,7 @@ export default {
   remoteLogs: {
     title: '远程日志',
     addConnection: '添加连接',
+    search: '搜索连接...',
     categories: {
       server: '服务器',
       middleware: '中间件',
@@ -94,6 +95,7 @@ export default {
       title: '日志内容',
       empty: '还没有远程连接。添加一个开始使用。',
       loading: '正在加载日志...',
+      noSearchResults: '没有找到匹配的连接。尝试其他搜索条件。',
     },
     actions: {
       connect: '连接',
@@ -101,6 +103,7 @@ export default {
       edit: '编辑',
       delete: '删除',
       addConnection: '添加连接',
+      clearSearch: '清除搜索',
     },
     defaultNames: {
       productionServer: '生产服务器',

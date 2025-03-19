@@ -26,6 +26,7 @@ export default {
   remoteLogs: {
     title: 'Remote Logs',
     addConnection: 'Add Connection',
+    search: 'Search connections...',
     categories: {
       server: 'Server',
       middleware: 'Middleware',
@@ -94,13 +95,15 @@ export default {
       title: 'Log Content',
       empty: 'No remote connections yet. Add one to get started.',
       loading: 'Loading logs...',
+      noSearchResults: 'No connections match your search. Try another query.'
     },
     actions: {
       connect: 'Connect',
       disconnect: 'Disconnect',
       edit: 'Edit',
       delete: 'Delete',
-      addConnection: 'Add Connection',
+      addConnection: 'Add',
+      clearSearch: 'Clear Search'
     },
     defaultNames: {
       productionServer: 'Production Server',
