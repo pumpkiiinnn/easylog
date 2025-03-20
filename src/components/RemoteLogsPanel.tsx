@@ -109,12 +109,6 @@ export default function RemoteLogsPanel() {
     modalBg: isDark ? '#1A1B1E' : '#fff',
   };
 
-  const getTypeIcon = (type: string) => {
-    const typeConfig = REMOTE_TYPES.find(t => t.types.some(t => t.value === type));
-    const Icon = typeConfig?.types.find(t => t.value === type)?.icon || IconCloud;
-    return <Icon size={18} color={typeConfig?.types.find(t => t.value === type)?.color} />;
-  };
-
   const getTypeColor = (type: string) => {
     const typeConfig = REMOTE_TYPES.find(t => t.types.some(t => t.value === type));
     return typeConfig?.types.find(t => t.value === type)?.color || '#868E96';
