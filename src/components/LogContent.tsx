@@ -60,13 +60,6 @@ export default function LogContent() {
       const isBottom = scrollHeight - scrollTop - clientHeight < 20;
       isScrolledToBottom.current = isBottom;
       
-      console.log('滚动状态:', { 
-        scrollTop, 
-        scrollHeight, 
-        clientHeight, 
-        isBottom,
-        distanceFromBottom: scrollHeight - scrollTop - clientHeight
-      });
     };
     
     const viewport = viewportRef.current;
