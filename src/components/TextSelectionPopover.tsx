@@ -95,6 +95,8 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
     setIsThinking(true);
     
     try {
+      //TODO 后续切换为后端接口
+
       // 随机等待1-3秒
       await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
       
