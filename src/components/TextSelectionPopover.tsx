@@ -244,7 +244,6 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
-                      console.log('按下回车键');
                       handleSubmit();
                     }
                   }}
