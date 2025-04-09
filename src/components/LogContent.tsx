@@ -227,7 +227,13 @@ export default function LogContent() {
 
   // 渲染单条日志
   const renderLogEntry = (entry: LogEntry, index: number) => {
-    const style = styles[entry.level.toLowerCase()] || styles.info;
+    const styles = useLogSettingsStore.getState().styles;
+    const fontSize = useLogSettingsStore.getState().fontSize;
+    const searchText = useLogSettingsStore.getState().searchText;
+    const getStyleForLevel = useLogSettingsStore.getState().getStyleForLevel;
+    
+    // 使用 getStyleForLevel 函数获取样式，确保处理 JSON 日志中的各种日志等级
+    const style = getStyleForLevel(entry.level);
     const segments = highlightText(entry.rawContent, searchText);
     const isCurrentMatch = searchMatches[currentSearchIndex] === index;
     

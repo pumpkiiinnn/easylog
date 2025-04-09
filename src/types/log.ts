@@ -7,7 +7,10 @@ export interface LogEntry {
   logger?: string;
 }
 
-export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
+export type LogLevel = 'ERROR' | 'WARN' | 'INFO' | 'DEBUG' | 'TRACE' | 
+                        'error' | 'warn' | 'info' | 'debug' | 'trace' | 
+                        'FATAL' | 'fatal' | 'SEVERE' | 'severe' | 
+                        'WARNING' | 'warning';
 
 export interface LogStyle {
   color: string;

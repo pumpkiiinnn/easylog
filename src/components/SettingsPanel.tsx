@@ -1,8 +1,8 @@
-import { Stack, Text, Switch, ColorInput, NumberInput, Box } from '@mantine/core';
+import { Stack, Text, Switch, ColorInput, NumberInput, Box, Alert } from '@mantine/core';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { useThemeStore } from '../stores/themeStore';
 import { LogLevel } from '../types/log';
-import { IconMoonStars, IconSun } from '@tabler/icons-react';
+import { IconMoonStars, IconSun, IconInfoCircle } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
 export default function SettingsPanel() {
@@ -96,6 +96,23 @@ export default function SettingsPanel() {
               }
             }}
           />
+          
+          <Alert 
+            icon={<IconInfoCircle size={16} />}
+            color="blue"
+            variant="light"
+            title="JSON 日志支持"
+            styles={{
+              title: { fontSize: '13px', color: colors.text },
+              body: { fontSize: '12px', color: isDark ? '#909296' : '#868e96' },
+              root: { 
+                backgroundColor: isDark ? 'rgba(34, 139, 230, 0.1)' : 'rgba(34, 139, 230, 0.05)',
+                border: `1px solid ${isDark ? 'rgba(34, 139, 230, 0.2)' : 'rgba(34, 139, 230, 0.1)'}`,
+              }
+            }}
+          >
+            现已支持 JSON 格式的日志解析，系统将自动识别 JSON 中的 severity/level 字段作为日志等级。
+          </Alert>
           
           {(Object.keys(styles) as LogLevel[]).map((level) => (
             <ColorInput
