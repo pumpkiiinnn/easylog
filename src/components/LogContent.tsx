@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
   const { isLoading, currentFile, readFile } = useFileHandler();
-  const { currentFileName, content: storeContent } = useLogContentStore();
+  const { currentFileName, content: storeContent, setLogContent, setCurrentFileName } = useLogContentStore();
   const { styles, fontSize, searchText, setSearchText, autoScroll } = useLogSettingsStore();
   const { formats, activeFormatId } = useLogFormatStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
@@ -174,8 +174,16 @@ export default function LogContent() {
       } else {
         // Web 环境，文件是 File 对象
         const file = files[0] as File;
-        // 读取文件内容但不直接使用，因为在Web环境中我们依赖其他机制来处理文件
-        await file.text(); // 不存储结果，避免未使用变量警告
+        // 读取文件内容并更新到 store
+        const content = await file.text();
+        console.log('Web environment file read:', {
+          name: file.name,
+          contentLength: content.length,
+          preview: content.substring(0, 100)
+        });
+        // 更新到全局状态
+        setLogContent(content);
+        setCurrentFileName(file.name);
         notifications.show({
           title: t('logContent.fileLoaded'),
           message: file.name,

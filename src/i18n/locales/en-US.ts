@@ -139,10 +139,12 @@ export default {
     refresh: 'Refresh',
     export: 'Export',
     searchPlaceholder: 'Search log content...',
+    fileLoaded: 'File Loaded',
     errors: {
       invalidType: 'Invalid File Type',
       validFileTypes: 'Please drop .log, .txt, or .json files',
       readError: 'Failed to read file: {{error}}',
+      fileLoadFailed: 'Failed to load file',
     },
   },
   settings: {

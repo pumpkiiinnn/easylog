@@ -139,10 +139,12 @@ export default {
     refresh: '刷新',
     export: '导出',
     searchPlaceholder: '搜索日志内容...',
+    fileLoaded: '文件已加载',
     errors: {
       invalidType: '无效的文件类型',
       validFileTypes: '请拖入 .log、.txt 或 .json 文件',
       readError: '读取文件失败：{{error}}',
+      fileLoadFailed: '文件加载失败',
     },
   },
   settings: {
