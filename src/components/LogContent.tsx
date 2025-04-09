@@ -184,8 +184,8 @@ export default function LogContent() {
         // 更新到全局状态
         setLogContent(content);
         setCurrentFileName(file.name);
+        // 显示单个成功通知
         notifications.show({
-          title: t('logContent.fileLoaded'),
           message: file.name,
           color: 'green',
         });
