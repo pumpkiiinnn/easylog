@@ -15,6 +15,73 @@ export class LogParser {
            /^[a-z]+\.[a-z]+\.[a-zA-Z.]*Exception:/.test(line); // 异常类名开头
   }
 
+  // 检查字符串是否为 JSON 格式
+  private static isJsonString(str: string): boolean {
+    try {
+      const json = JSON.parse(str);
+      return typeof json === 'object' && json !== null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 从 JSON 对象中提取日志等级
+  private static extractLevelFromJson(json: any): string {
+    // 常见的日志等级字段名称
+    const levelFieldNames = ['level', 'severity', 'loglevel', 'log_level', 'logLevel'];
+    
+    for (const field of levelFieldNames) {
+      if (json[field] !== undefined) {
+        return json[field].toLowerCase();
+      }
+    }
+
+    return 'info'; // 默认返回 info 级别
+  }
+
+  // 从 JSON 对象中提取时间戳
+  private static extractTimestampFromJson(json: any): string {
+    // 常见的时间戳字段名称
+    const timestampFieldNames = ['timestamp', '@timestamp', 'time', 'date', 'datetime', 'ts'];
+    
+    for (const field of timestampFieldNames) {
+      if (json[field] !== undefined) {
+        return json[field];
+      }
+    }
+
+    return '';
+  }
+
+  // 从 JSON 对象中提取日志消息内容
+  private static extractContentFromJson(json: any): string {
+    // 常见的消息内容字段名称
+    const contentFieldNames = ['message', 'msg', 'content', 'text', 'log', 'rest'];
+    
+    for (const field of contentFieldNames) {
+      if (json[field] !== undefined) {
+        return typeof json[field] === 'string' ? 
+          json[field] : 
+          JSON.stringify(json[field]);
+      }
+    }
+
+    // 如果找不到明确的消息字段，返回整个 JSON 字符串（排除已知的元数据字段）
+    const knownMetaFields = [
+      'timestamp', '@timestamp', 'time', 'date', 'datetime', 'ts',
+      'level', 'severity', 'loglevel', 'log_level', 'logLevel',
+      'logger', 'class', 'service'
+    ];
+    
+    const contentObj = Object.fromEntries(
+      Object.entries(json).filter(([key]) => !knownMetaFields.includes(key))
+    );
+    
+    return Object.keys(contentObj).length > 0 ? 
+      JSON.stringify(contentObj) : 
+      JSON.stringify(json);
+  }
+
   static parseLogContent(content: string): LogEntry[] {
     if (!content) return [];
 
@@ -24,6 +91,30 @@ export class LogParser {
 
     for (const line of lines) {
       if (!line.trim()) continue;
+
+      // 检查是否为 JSON 格式的日志
+      if (line.trim().startsWith('{') && line.trim().endsWith('}') && this.isJsonString(line)) {
+        try {
+          const jsonData = JSON.parse(line);
+          const level = this.extractLevelFromJson(jsonData);
+          const timestamp = this.extractTimestampFromJson(jsonData);
+          const content = this.extractContentFromJson(jsonData);
+          const logger = jsonData.logger || jsonData.class || jsonData.service || '';
+          
+          currentLevel = level;
+          entries.push({
+            timestamp,
+            level,
+            traceId: jsonData.trace || jsonData.traceId || jsonData.span || '',
+            content,
+            rawContent: line,
+            logger
+          });
+          continue;
+        } catch (e) {
+          // JSON 解析失败，按照普通文本处理
+        }
+      }
 
       // 尝试匹配 Spring Boot 格式
       const springBootMatch = line.match(this.springBootLogPattern);
@@ -81,4 +172,4 @@ export class LogParser {
 
     return entries;
   }
-} 
+}
