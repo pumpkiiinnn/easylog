@@ -8,6 +8,7 @@ import { isTauri } from '../utils/environment';
 import { useLogContentStore } from '../stores/logContentStore';
 import { LogParser } from '../utils/logParser';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
+import { useLogFormatStore } from '../stores/logFormatStore';
 import { LogEntry } from '../types/log';
 import { highlightText } from '../utils/textHighlight';
 import SearchNavigation from './SearchNavigation';
@@ -21,6 +22,7 @@ export default function LogContent() {
   const { isLoading, currentFile, readFile } = useFileHandler();
   const { currentFileName, content: storeContent } = useLogContentStore();
   const { styles, fontSize, searchText, setSearchText, autoScroll } = useLogSettingsStore();
+  const { formats, activeFormatId } = useLogFormatStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [searchMatches, setSearchMatches] = useState<number[]>([]);
@@ -73,11 +75,17 @@ export default function LogContent() {
     };
   }, []);
 
-  // 监听 storeContent 变化，解析日志
+  // 监听 storeContent 和 activeFormatId 变化，解析日志
   useEffect(() => {
     if (storeContent) {
-      const logs = LogParser.parseLogContent(storeContent);
+      // 将格式信息传递给解析器
+      const logs = LogParser.parseLogContent(storeContent, formats, activeFormatId);
       setParsedLogs(logs);
+      console.log('解析日志:', {
+        totalLogs: logs.length,
+        formatId: activeFormatId,
+        formatCount: formats.length
+      });
       
       // 记录当前内容长度，用于后续判断内容是否有更新
       const currentLength = storeContent.length;
@@ -89,7 +97,7 @@ export default function LogContent() {
       
       previousContentLength.current = currentLength;
     }
-  }, [storeContent, autoScroll]);
+  }, [storeContent, autoScroll, activeFormatId, formats]);
 
   // 滚动到底部的函数
   const scrollToBottom = () => {

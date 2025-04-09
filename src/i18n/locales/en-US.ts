@@ -184,6 +184,17 @@ export default {
       debug: 'Debug Color',
       trace: 'Trace Color'
     },
+    customLogFormat: {
+      title: 'Custom Log Format',
+      description: 'Add custom log formats with regex patterns to match non-standard logs',
+      selectFormat: 'Select Log Format',
+      selectFormatPlaceholder: 'Choose a log format to use',
+      defaultFormats: 'Default Formats',
+      customFormats: 'Custom Formats',
+      active: 'Active',
+      addFormat: 'Add Format',
+      editFormat: 'Edit Format'
+    },
     auth: {
       login: 'Login',
       logout: 'Logout',
@@ -230,6 +241,47 @@ export default {
       creative: 'Creative',
       concise: 'Concise',
     },
+  },
+  customLogFormat: {
+    addFormat: 'Add Log Format',
+    editFormat: 'Edit Log Format',
+    name: 'Format Name',
+    namePlaceholder: 'Enter format name',
+    pattern: 'Regex Pattern',
+    patternPlaceholder: 'Enter regular expression',
+    patternDescription: 'Use regex capture groups to extract different parts of the log',
+    sample: 'Sample Log',
+    samplePlaceholder: 'Enter a sample log line',
+    sampleDescription: 'Enter a sample log line to test the regex pattern',
+    groupsDescription: 'Set capture group indices to specify which parentheses capture timestamp, log level, etc.',
+    levelGroup: 'Log Level Group',
+    levelGroupDescription: 'Group index that captures log level (ERROR, INFO, etc.)',
+    messageGroup: 'Message Content Group',
+    messageGroupDescription: 'Group index that captures the main log message',
+    timestampGroup: 'Timestamp Group',
+    timestampGroupDescription: 'Group index that captures the timestamp (optional)',
+    traceIdGroup: 'Trace ID Group',
+    traceIdGroupDescription: 'Group index that captures trace ID (optional)',
+    loggerGroup: 'Logger Group',
+    loggerGroupDescription: 'Group index that captures logger name/class (optional)',
+    testDescription: 'Test if your regex pattern correctly parses the sample log',
+    testButton: 'Test Regex Pattern',
+    testSuccess: 'Test Successful',
+    testFailed: 'Test Failed',
+    tabs: {
+      basic: 'Basic Settings',
+      captureGroups: 'Capture Groups',
+      test: 'Test'
+    },
+    errors: {
+      nameRequired: 'Format name is required',
+      patternRequired: 'Regex pattern is required',
+      sampleRequired: 'Sample log line is required',
+      levelGroupRequired: 'Log level group is required',
+      messageGroupRequired: 'Message content group is required',
+      patternOrSampleMissing: 'Both regex pattern and sample log are required',
+      invalidPattern: 'Invalid regex pattern'
+    }
   },
   bottomMenu: {
     format: 'Format',

@@ -184,6 +184,17 @@ export default {
       debug: '调试颜色',
       trace: '追踪颜色'
     },
+    customLogFormat: {
+      title: '自定义日志格式',
+      description: '您可以添加自定义日志格式，通过正则表达式匹配非标准格式的日志',
+      selectFormat: '选择日志格式',
+      selectFormatPlaceholder: '选择要使用的日志格式',
+      defaultFormats: '默认格式',
+      customFormats: '自定义格式',
+      active: '已激活',
+      addFormat: '添加格式',
+      editFormat: '编辑格式'
+    },
     auth: {
       login: '登录',
       logout: '退出登录',
@@ -230,6 +241,47 @@ export default {
       creative: '创意',
       concise: '简洁',
     },
+  },
+  customLogFormat: {
+    addFormat: '添加日志格式',
+    editFormat: '编辑日志格式',
+    name: '格式名称',
+    namePlaceholder: '输入格式名称',
+    pattern: '正则表达式模式',
+    patternPlaceholder: '输入正则表达式',
+    patternDescription: '使用正则表达式捕获组来提取日志的不同部分',
+    sample: '示例日志',
+    samplePlaceholder: '输入示例日志行',
+    sampleDescription: '输入一行示例日志用于测试正则表达式',
+    groupsDescription: '设置捕获组索引，指定哪个括号捕获的是时间戳、日志级别等',
+    levelGroup: '日志级别捕获组',
+    levelGroupDescription: '捕获日志级别(ERROR, INFO等)的组索引',
+    messageGroup: '消息内容捕获组',
+    messageGroupDescription: '捕获日志主要内容的组索引',
+    timestampGroup: '时间戳捕获组',
+    timestampGroupDescription: '捕获日志时间戳的组索引 (可选)',
+    traceIdGroup: '追踪ID捕获组',
+    traceIdGroupDescription: '捕获追踪ID的组索引 (可选)',
+    loggerGroup: '日志来源捕获组',
+    loggerGroupDescription: '捕获日志来源(类名等)的组索引 (可选)',
+    testDescription: '测试您的正则表达式是否能正确解析示例日志',
+    testButton: '测试正则表达式',
+    testSuccess: '测试成功',
+    testFailed: '测试失败',
+    tabs: {
+      basic: '基础设置',
+      captureGroups: '捕获组',
+      test: '测试'
+    },
+    errors: {
+      nameRequired: '请输入格式名称',
+      patternRequired: '请输入正则表达式模式',
+      sampleRequired: '请输入示例日志行',
+      levelGroupRequired: '请指定日志级别捕获组',
+      messageGroupRequired: '请指定消息内容捕获组',
+      patternOrSampleMissing: '请同时提供正则表达式和示例日志',
+      invalidPattern: '无效的正则表达式'
+    }
   },
   bottomMenu: {
     format: '格式',

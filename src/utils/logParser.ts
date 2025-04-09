@@ -1,4 +1,4 @@
-import { LogEntry } from '../types/log';
+import { LogEntry, CustomLogFormat } from '../types/log';
 
 export class LogParser {
   // Spring Boot 日志格式的正则表达式
@@ -82,12 +82,46 @@ export class LogParser {
       JSON.stringify(json);
   }
 
-  static parseLogContent(content: string): LogEntry[] {
+  // 尝试使用自定义格式解析日志行
+  private static parseWithCustomFormat(line: string, format: CustomLogFormat): LogEntry | null {
+    try {
+      const regex = new RegExp(format.pattern);
+      const match = line.match(regex);
+      
+      if (!match) return null;
+      
+      const { groups } = format;
+      const level = match[groups.level] || 'info';
+      const content = match[groups.message] || '';
+      const timestamp = groups.timestamp !== undefined ? match[groups.timestamp] || '' : '';
+      const traceId = groups.traceId !== undefined ? match[groups.traceId] || '' : '';
+      const logger = groups.logger !== undefined ? match[groups.logger] || '' : '';
+      
+      return {
+        timestamp,
+        level: level.toLowerCase(),
+        traceId,
+        content,
+        rawContent: line,
+        logger
+      };
+    } catch (e) {
+      console.error('Error parsing with custom format:', e);
+      return null;
+    }
+  }
+
+  static parseLogContent(content: string, customFormats: CustomLogFormat[] = [], activeFormatId: string | null = null): LogEntry[] {
     if (!content) return [];
 
     const lines = content.split('\n');
     const entries: LogEntry[] = [];
     let currentLevel: string | null = null;
+    
+    // 如果有激活的格式，优先使用该格式
+    const activeFormat = activeFormatId 
+      ? customFormats.find(f => f.id === activeFormatId) 
+      : undefined;
 
     for (const line of lines) {
       if (!line.trim()) continue;
@@ -115,6 +149,33 @@ export class LogParser {
           // JSON 解析失败，按照普通文本处理
         }
       }
+
+      // 如果有激活的自定义格式，优先尝试使用该格式解析
+      if (activeFormat) {
+        const entry = this.parseWithCustomFormat(line, activeFormat);
+        if (entry) {
+          currentLevel = entry.level;
+          entries.push(entry);
+          continue;
+        }
+      }
+
+      // 如果没有激活的格式或激活的格式解析失败，尝试所有其他自定义格式
+      let parsedWithCustomFormat = false;
+      for (const format of customFormats) {
+        // 跳过已尝试的激活格式
+        if (format.id === activeFormatId) continue;
+        
+        const entry = this.parseWithCustomFormat(line, format);
+        if (entry) {
+          currentLevel = entry.level;
+          entries.push(entry);
+          parsedWithCustomFormat = true;
+          break;
+        }
+      }
+      
+      if (parsedWithCustomFormat) continue;
 
       // 尝试匹配 Spring Boot 格式
       const springBootMatch = line.match(this.springBootLogPattern);
@@ -171,5 +232,24 @@ export class LogParser {
     }
 
     return entries;
+  }
+  
+  // 测试自定义格式是否能正确解析示例日志
+  static testCustomFormat(format: CustomLogFormat): { success: boolean; result?: LogEntry; error?: string } {
+    try {
+      if (!format.sample) {
+        return { success: false, error: '未提供示例日志' };
+      }
+      
+      const entry = this.parseWithCustomFormat(format.sample, format);
+      
+      if (!entry) {
+        return { success: false, error: '正则表达式无法匹配示例日志' };
+      }
+      
+      return { success: true, result: entry };
+    } catch (e: any) {
+      return { success: false, error: e.message || '解析失败' };
+    }
   }
 }

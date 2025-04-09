@@ -1,9 +1,12 @@
-import { Stack, Text, Switch, ColorInput, NumberInput, Box, Alert } from '@mantine/core';
+import { Stack, Text, Switch, ColorInput, NumberInput, Box, Alert, Button, Select, Badge, Group } from '@mantine/core';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { useThemeStore } from '../stores/themeStore';
 import { LogLevel } from '../types/log';
-import { IconMoonStars, IconSun, IconInfoCircle } from '@tabler/icons-react';
+import { IconMoonStars, IconSun, IconInfoCircle, IconPlus, IconEdit } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import CustomLogFormatDialog from './CustomLogFormatDialog';
+import { useLogFormatStore } from '../stores/logFormatStore';
 
 export default function SettingsPanel() {
   const {
@@ -18,6 +21,10 @@ export default function SettingsPanel() {
   } = useLogSettingsStore();
 
   const { isDark, toggleTheme } = useThemeStore();
+  const { formats, activeFormatId, setActiveFormat } = useLogFormatStore();
+
+  const [formatDialogOpen, setFormatDialogOpen] = useState(false);
+  const [editingFormatId, setEditingFormatId] = useState<string | undefined>(undefined);
 
   const { t } = useTranslation();
 
@@ -25,6 +32,23 @@ export default function SettingsPanel() {
     border: isDark ? '#2C2E33' : '#e9ecef',
     inputBg: isDark ? '#1A1B1E' : '#f8f9fa',
     text: isDark ? '#C1C2C5' : '#495057',
+  };
+
+  // 打开添加格式对话框
+  const openAddFormatDialog = () => {
+    setEditingFormatId(undefined);
+    setFormatDialogOpen(true);
+  };
+
+  // 打开编辑格式对话框
+  const openEditFormatDialog = (id: string) => {
+    setEditingFormatId(id);
+    setFormatDialogOpen(true);
+  };
+
+  // 处理格式选择
+  const handleFormatSelect = (value: string | null) => {
+    setActiveFormat(value);
   };
 
   return (
@@ -97,22 +121,70 @@ export default function SettingsPanel() {
             }}
           />
           
-          <Alert 
-            icon={<IconInfoCircle size={16} />}
-            color="blue"
-            variant="light"
-            title="JSON 日志支持"
-            styles={{
-              title: { fontSize: '13px', color: colors.text },
-              body: { fontSize: '12px', color: isDark ? '#909296' : '#868e96' },
-              root: { 
-                backgroundColor: isDark ? 'rgba(34, 139, 230, 0.1)' : 'rgba(34, 139, 230, 0.05)',
-                border: `1px solid ${isDark ? 'rgba(34, 139, 230, 0.2)' : 'rgba(34, 139, 230, 0.1)'}`,
+
+          <Box>
+            <Group justify="space-between" mb="xs">
+              <Text 
+                size="sm" 
+                fw={500}
+                c={colors.text}
+              >
+                {t('settings.customLogFormat.title', '日志格式')}
+              </Text>
+              <Button 
+                leftSection={<IconPlus size={14} />} 
+                variant="subtle" 
+                size="xs"
+                onClick={openAddFormatDialog}
+              >
+                {t('settings.customLogFormat.addFormat', '添加')}
+              </Button>
+            </Group>
+
+            <Select
+              placeholder={t('settings.customLogFormat.selectFormatPlaceholder', '选择格式')}
+              data={formats.length > 0 ? 
+                [
+                  ...(formats.some(format => format.isDefault) ? [{
+                    group: t('settings.customLogFormat.defaultFormats', '默认'),
+                    items: formats.filter(format => format.isDefault).map(format => ({
+                      value: format.id,
+                      label: format.name
+                    }))
+                  }] : []),
+                  ...(formats.some(format => !format.isDefault) ? [{
+                    group: t('settings.customLogFormat.customFormats', '自定义'),
+                    items: formats.filter(format => !format.isDefault).map(format => ({
+                      value: format.id,
+                      label: format.name
+                    }))
+                  }] : [])
+                ].filter(group => group.items.length > 0)
+                : [] 
               }
-            }}
-          >
-            现已支持 JSON 格式的日志解析，系统将自动识别 JSON 中的 severity/level 字段作为日志等级。
-          </Alert>
+              value={activeFormatId}
+              onChange={handleFormatSelect}
+              clearable
+              mb="sm"
+              styles={{
+                input: {
+                  backgroundColor: colors.inputBg,
+                  borderColor: colors.border,
+                  color: colors.text,
+                },
+              }}
+              rightSection={
+                activeFormatId && !formats.find(f => f.id === activeFormatId)?.isDefault ? (
+                  <div 
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => openEditFormatDialog(activeFormatId)}
+                  >
+                    <IconEdit size={16} color={colors.text} />
+                  </div>
+                ) : null
+              }
+            />
+          </Box>
           
           {(Object.keys(styles) as LogLevel[]).map((level) => (
             <ColorInput
@@ -135,6 +207,12 @@ export default function SettingsPanel() {
           ))}
         </Stack>
       </Box>
+
+      <CustomLogFormatDialog
+        opened={formatDialogOpen}
+        onClose={() => setFormatDialogOpen(false)}
+        editingFormatId={editingFormatId}
+      />
     </Stack>
   );
 } 
