@@ -1,8 +1,8 @@
-import { Stack, Text, Switch, ColorInput, NumberInput, Box, Alert, Button, Select, Badge, Group } from '@mantine/core';
+import { Stack, Text, Switch, ColorInput, NumberInput, Box, Button, Select, Group } from '@mantine/core';
 import { useLogSettingsStore } from '../stores/logSettingsStore';
 import { useThemeStore } from '../stores/themeStore';
 import { LogLevel } from '../types/log';
-import { IconMoonStars, IconSun, IconInfoCircle, IconPlus, IconEdit } from '@tabler/icons-react';
+import { IconMoonStars, IconSun, IconPlus, IconEdit } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import CustomLogFormatDialog from './CustomLogFormatDialog';

@@ -21,7 +21,7 @@ export default function LogContent() {
   const [isDragging, setIsDragging] = useState(false);
   const { isLoading, currentFile, readFile } = useFileHandler();
   const { currentFileName, content: storeContent, setLogContent, setCurrentFileName } = useLogContentStore();
-  const { styles, fontSize, searchText, setSearchText, autoScroll } = useLogSettingsStore();
+  const { searchText, setSearchText, autoScroll } = useLogSettingsStore();
   const { formats, activeFormatId } = useLogFormatStore();
   const [parsedLogs, setParsedLogs] = useState<LogEntry[]>([]);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
@@ -243,7 +243,7 @@ export default function LogContent() {
 
   // 渲染单条日志
   const renderLogEntry = (entry: LogEntry, index: number) => {
-    const styles = useLogSettingsStore.getState().styles;
+    // const styles = useLogSettingsStore.getState().styles;
     const fontSize = useLogSettingsStore.getState().fontSize;
     const searchText = useLogSettingsStore.getState().searchText;
     const getStyleForLevel = useLogSettingsStore.getState().getStyleForLevel;

@@ -1,15 +1,14 @@
-import { 
-  Modal, 
-  TextInput, 
-  Textarea, 
-  NumberInput, 
-  Button, 
-  Group, 
-  Stack, 
-  Text, 
-  Box, 
-  Alert, 
-  Switch,
+import {
+  Modal,
+  TextInput,
+  Textarea,
+  NumberInput,
+  Button,
+  Group,
+  Stack,
+  Text,
+  Box,
+  Alert,
   Code,
   Tabs,
   ScrollArea
@@ -18,7 +17,7 @@ import { useState, useEffect } from 'react';
 import { useLogFormatStore } from '../stores/logFormatStore';
 import { CustomLogFormat } from '../types/log';
 import { LogParser } from '../utils/logParser';
-import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
+import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
 interface CustomLogFormatDialogProps {
@@ -27,14 +26,14 @@ interface CustomLogFormatDialogProps {
   editingFormatId?: string;
 }
 
-export default function CustomLogFormatDialog({ 
-  opened, 
-  onClose, 
-  editingFormatId 
+export default function CustomLogFormatDialog({
+  opened,
+  onClose,
+  editingFormatId
 }: CustomLogFormatDialogProps) {
   const { t } = useTranslation();
-  const { formats, addFormat, updateFormat, getFormatById } = useLogFormatStore();
-  
+  const { addFormat, updateFormat, getFormatById } = useLogFormatStore();
+
   const [name, setName] = useState('');
   const [pattern, setPattern] = useState('');
   const [sample, setSample] = useState('');
@@ -43,13 +42,13 @@ export default function CustomLogFormatDialog({
   const [messageGroup, setMessageGroup] = useState<number | undefined>(undefined);
   const [traceIdGroup, setTraceIdGroup] = useState<number | undefined>(undefined);
   const [loggerGroup, setLoggerGroup] = useState<number | undefined>(undefined);
-  
+
   const [testResult, setTestResult] = useState<{
     success: boolean;
     result?: any;
     error?: string;
   } | null>(null);
-  
+
   // 表单验证
   const [errors, setErrors] = useState<{
     name?: string;
@@ -96,27 +95,27 @@ export default function CustomLogFormatDialog({
   // 验证表单
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
-    
+
     if (!name.trim()) {
       newErrors.name = t('customLogFormat.errors.nameRequired');
     }
-    
+
     if (!pattern.trim()) {
       newErrors.pattern = t('customLogFormat.errors.patternRequired');
     }
-    
+
     if (!sample.trim()) {
       newErrors.sample = t('customLogFormat.errors.sampleRequired');
     }
-    
+
     if (levelGroup === undefined) {
       newErrors.levelGroup = t('customLogFormat.errors.levelGroupRequired');
     }
-    
+
     if (messageGroup === undefined) {
       newErrors.messageGroup = t('customLogFormat.errors.messageGroupRequired');
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -131,7 +130,7 @@ export default function CustomLogFormatDialog({
         });
         return;
       }
-      
+
       const testFormat: CustomLogFormat = {
         id: 'test',
         name: 'Test Format',
@@ -145,10 +144,10 @@ export default function CustomLogFormatDialog({
         },
         sample
       };
-      
+
       const result = LogParser.testCustomFormat(testFormat);
       setTestResult(result);
-      
+
     } catch (e: any) {
       setTestResult({
         success: false,
@@ -160,7 +159,7 @@ export default function CustomLogFormatDialog({
   // 保存格式
   const saveFormat = () => {
     if (!validateForm()) return;
-    
+
     const formatData: Omit<CustomLogFormat, 'id'> = {
       name,
       pattern,
@@ -170,32 +169,32 @@ export default function CustomLogFormatDialog({
         message: messageGroup!
       }
     };
-    
+
     if (timestampGroup !== undefined) {
       formatData.groups.timestamp = timestampGroup;
     }
-    
+
     if (traceIdGroup !== undefined) {
       formatData.groups.traceId = traceIdGroup;
     }
-    
+
     if (loggerGroup !== undefined) {
       formatData.groups.logger = loggerGroup;
     }
-    
+
     if (editingFormatId) {
       updateFormat(editingFormatId, formatData);
     } else {
       addFormat(formatData);
     }
-    
+
     onClose();
   };
 
   return (
-    <Modal 
-      opened={opened} 
-      onClose={onClose} 
+    <Modal
+      opened={opened}
+      onClose={onClose}
       title={editingFormatId ? t('customLogFormat.editFormat') : t('customLogFormat.addFormat')}
       size="lg"
     >
@@ -216,7 +215,7 @@ export default function CustomLogFormatDialog({
               error={errors.name}
               required
             />
-            
+
             <Textarea
               label={t('customLogFormat.pattern')}
               placeholder={t('customLogFormat.patternPlaceholder')}
@@ -227,7 +226,7 @@ export default function CustomLogFormatDialog({
               minRows={3}
               required
             />
-            
+
             <Textarea
               label={t('customLogFormat.sample')}
               placeholder={t('customLogFormat.samplePlaceholder')}
@@ -244,7 +243,7 @@ export default function CustomLogFormatDialog({
         <Tabs.Panel value="groups" pt="md">
           <Stack>
             <Text size="sm" mb="xs">{t('customLogFormat.groupsDescription')}</Text>
-            
+
             <NumberInput
               label={t('customLogFormat.levelGroup')}
               description={t('customLogFormat.levelGroupDescription')}
@@ -255,7 +254,7 @@ export default function CustomLogFormatDialog({
               min={1}
               required
             />
-            
+
             <NumberInput
               label={t('customLogFormat.messageGroup')}
               description={t('customLogFormat.messageGroupDescription')}
@@ -266,7 +265,7 @@ export default function CustomLogFormatDialog({
               min={1}
               required
             />
-            
+
             <NumberInput
               label={t('customLogFormat.timestampGroup')}
               description={t('customLogFormat.timestampGroupDescription')}
@@ -275,7 +274,7 @@ export default function CustomLogFormatDialog({
               onChange={(value) => setTimestampGroup(typeof value === 'number' ? value : undefined)}
               min={1}
             />
-            
+
             <NumberInput
               label={t('customLogFormat.traceIdGroup')}
               description={t('customLogFormat.traceIdGroupDescription')}
@@ -284,7 +283,7 @@ export default function CustomLogFormatDialog({
               onChange={(value) => setTraceIdGroup(typeof value === 'number' ? value : undefined)}
               min={1}
             />
-            
+
             <NumberInput
               label={t('customLogFormat.loggerGroup')}
               description={t('customLogFormat.loggerGroupDescription')}
@@ -299,16 +298,16 @@ export default function CustomLogFormatDialog({
         <Tabs.Panel value="test" pt="md">
           <Stack>
             <Text size="sm" mb="xs">{t('customLogFormat.testDescription')}</Text>
-            
+
             <Button onClick={testRegex} variant="light">
               {t('customLogFormat.testButton')}
             </Button>
-            
+
             {testResult && (
               <Box mt="md">
                 {testResult.success ? (
-                  <Alert 
-                    icon={<IconCheck size={16} />} 
+                  <Alert
+                    icon={<IconCheck size={16} />}
                     title={t('customLogFormat.testSuccess')}
                     color="green"
                   >
@@ -319,8 +318,8 @@ export default function CustomLogFormatDialog({
                     </ScrollArea>
                   </Alert>
                 ) : (
-                  <Alert 
-                    icon={<IconAlertCircle size={16} />} 
+                  <Alert
+                    icon={<IconAlertCircle size={16} />}
                     title={t('customLogFormat.testFailed')}
                     color="red"
                   >
