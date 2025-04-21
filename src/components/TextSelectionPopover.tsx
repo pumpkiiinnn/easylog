@@ -5,6 +5,8 @@ import { useClickOutside } from '@mantine/hooks';
 import { useThemeStore } from '../stores/themeStore';
 import { useSidebarStore } from '../stores/sidebarStore';
 import { useChatHistoryStore } from '../stores/chatHistoryStore';
+import { useUserStore } from '../stores/userStore';
+import { fetch } from '@tauri-apps/plugin-http';
 
 interface TextSelectionPopoverProps {
   onSubmit: (text: string) => void;
@@ -16,11 +18,18 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
   const [selectedText, setSelectedText] = useState('');
   const [inputText, setInputText] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  //@ts-ignore
   const [isThinking, setIsThinking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { isDark } = useThemeStore();
   const { setActiveSidebar } = useSidebarStore();
-  const { addMessage } = useChatHistoryStore();
+  const { 
+    addMessage, 
+    currentSessionId, 
+    setSessionId, 
+    activeChatSessionId, 
+    createSession 
+  } = useChatHistoryStore();
+  const { token } = useUserStore();
   
   const popoverRef = useClickOutside(() => {
     if (!isPopoverOpen) {
@@ -89,48 +98,138 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
     };
   }, []);
 
-  // 模拟AI回复
-  //@ts-ignore
-  const simulateAIResponse = async (userMessage: string) => {
+  // 调用真实API
+  const simulateAIResponse = async (userMessage: string, selectedText?: string) => {
     setIsThinking(true);
+    setError(null);
+    
+    // 创建一个带超时的fetch请求
+    const fetchWithTimeout = async (url: string, options: any, timeout = 30000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    };
     
     try {
-      //TODO 后续切换为后端接口
+      // 检查用户是否已登录
+      if (!token) {
+        throw new Error('请先登录后再使用AI对话功能');
+      }
+      
+      // 确保有活跃会话
+      if (!activeChatSessionId) {
+        console.log('没有活跃会话，创建新会话');
+        createSession();
+      }
+      
+      // 准备请求体
+      const requestBody: any = {
+        application: "xai",
+        // 直接在消息中包含选中的文本
+        message: selectedText 
+          ? `以下是我选中的日志内容:\n${selectedText}\n\n我的问题是:\n${userMessage}`
+          : userMessage
+      };
+      
+      // 如果存在会话ID，添加到请求中
+      if (currentSessionId) {
+        requestBody.session_id = currentSessionId;
+        console.log('使用现有会话ID:', currentSessionId);
+      } else {
+        console.log('创建新会话');
+      }
+      
+      // 调用真实API
+      const response = await fetchWithTimeout(
+        'https://myllm.ai-ia.cc/api/chat/completions', 
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(requestBody)
+        },
+        30000 // 30秒超时
+      );
 
-      // 随机等待1-3秒
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      const data = await response.json();
+      console.log('AI响应数据:', data);
       
-      // 模拟的回复内容
-      const responses = [
-        "我已经分析了您提供的日志内容。这看起来是一个常见的问题，建议检查系统配置。",
-        "根据日志显示，这可能是网络连接问题导致的。建议检查网络状态和防火墙设置。",
-        "从日志来看，似乎是应用程序在高负载情况下的性能问题。建议优化相关代码或增加资源配置。",
-        "这个错误日志表明可能存在内存泄漏。建议检查相关组件的资源释放情况。",
-        "日志中显示的错误模式比较典型，可能是配置文件的权限问题导致的。"
-      ];
+      if (response.ok && data.message) {
+        // 如果是第一次对话，保存会话ID
+        if (!currentSessionId && data.session_id) {
+          console.log('保存新会话ID:', data.session_id);
+          setSessionId(data.session_id);
+        }
+        
+        // 添加AI回复
+        addMessage({
+          id: Date.now().toString(),
+          content: data.message,
+          timestamp: new Date(),
+          role: 'assistant',
+          metadata: {
+            model: data.model,
+            sessionId: data.session_id,
+            usage: data.usage
+          }
+        });
+      } else {
+        throw new Error(data.message || '请求失败');
+      }
+    } catch (error) {
+      console.error('调用AI API出错:', error);
       
-      const response = responses[Math.floor(Math.random() * responses.length)];
+      let errorMessage = '连接服务器失败';
       
-      // 添加AI回复
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = '请求超时，请稍后再试';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // 添加错误消息
       addMessage({
         id: Date.now().toString(),
-        content: response,
+        content: `请求失败: ${errorMessage}`,
         timestamp: new Date(),
         role: 'assistant'
       });
-    } catch (error) {
-      console.error('Error in AI response:', error);
     } finally {
       setIsThinking(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (inputText.trim()) {
+    if (!inputText.trim() || isThinking) return;
+    
+    try {
       console.log('开始提交:', { inputText });
       // 先打开聊天历史窗口
       setActiveSidebar('chat-history');
       console.log('已打开聊天历史窗口');
+      
+      // 确保有活跃会话
+      if (!activeChatSessionId) {
+        console.log('没有活跃会话，创建新会话');
+        createSession();
+      }
       
       // 添加到聊天历史
       addMessage({
@@ -153,8 +252,11 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
       window.getSelection()?.removeAllRanges();
       console.log('已关闭弹出窗口');
 
-      // 触发AI回复
-      await simulateAIResponse(inputText);
+      // 触发AI回复，传入选中的文本
+      await simulateAIResponse(inputText, selectedText);
+    } catch (error) {
+      console.error('提交过程中出错:', error);
+      setError(error instanceof Error ? error.message : '提交失败');
     }
   };
 
@@ -235,67 +337,76 @@ export default function TextSelectionPopover({ onSubmit }: TextSelectionPopoverP
               {/* 输入区域 */}
               <Group gap={4} style={{ width: '100%', position: 'relative' }}>
                 <TextInput
-                  placeholder="输入你的问题... (按回车发送)"
+                  placeholder={isThinking ? "AI正在思考中..." : "输入你的问题... (按回车发送)"}
                   value={inputText}
+                  disabled={isThinking}
                   onChange={(event) => {
                     console.log('输入框值变化:', event.currentTarget.value);
                     setInputText(event.currentTarget.value);
                   }}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey && !isThinking) {
                       e.preventDefault();
                       handleSubmit();
                     }
                   }}
                   style={{ flex: 1 }}
-                  styles={{
-                    input: {
-                      backgroundColor: isDark ? '#1A1B1E' : '#f8f9fa',
-                      border: `1px solid ${isDark ? '#2C2E33' : '#e9ecef'}`,
-                      paddingRight: '40px', // 为图标留出空间
-                    }
-                  }}
-                  autoFocus
+                  rightSection={
+                    isThinking ? (
+                      <Box 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          width: 28, 
+                          height: 28 
+                        }}
+                      >
+                        <div className="spinner-circle" style={{
+                          width: 18,
+                          height: 18,
+                          border: '2px solid',
+                          borderColor: '#1971c2 #e9ecef #e9ecef',
+                          borderRadius: '50%',
+                          animation: 'spin 1.2s linear infinite'
+                        }} />
+                      </Box>
+                    ) : (
+                      <ActionIcon
+                        size="md"
+                        radius="sm"
+                        color="blue"
+                        variant="subtle"
+                        onClick={handleSubmit}
+                        disabled={!inputText.trim() || isThinking}
+                      >
+                        <IconCornerDownLeft size={18} />
+                      </ActionIcon>
+                    )
+                  }
                 />
-                
-                {/* 回车提示图标 */}
-                <Box 
-                  style={{ 
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    opacity: 0.5,
-                    pointerEvents: 'none', // 禁用鼠标事件
-                  }}
-                >
-                  <IconCornerDownLeft 
-                    size={16}
-                    style={{
-                      color: isDark ? '#909296' : '#adb5bd',
-                    }}
-                  />
-                </Box>
               </Group>
+              
+              {/* 错误信息显示 */}
+              {error && (
+                <Text c="red" size="xs" mt={5}>
+                  {error}
+                </Text>
+              )}
             </Stack>
           </Popover.Dropdown>
         </Popover>
-      </div>
 
-      <style>
-        {`
-          @keyframes popIn {
-            from {
-              opacity: 0;
-              transform: scale(0.8) translateY(10px);
+        {/* 使用标准的style标签 */}
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
             }
-            to {
-              opacity: 1;
-              transform: scale(1) translateY(0);
-            }
-          }
-        `}
-      </style>
+          `}
+        </style>
+      </div>
     </Portal>
   );
 } 

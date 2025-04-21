@@ -13,12 +13,29 @@ import {
   CopyButton, 
   Button, 
   Switch,
-  Loader
+  Loader,
+  Menu,
+  Divider,
+  TextInput,
+  Drawer
 } from '@mantine/core';
 import { useThemeStore } from '../stores/themeStore';
 import React, { useState, useRef, useEffect } from 'react';
 import { useChatHistoryStore } from '../stores/chatHistoryStore';
-import {IconCheck, IconCopy, IconMessage, IconSend, IconTrash} from "@tabler/icons-react";
+import {
+  IconCheck, 
+  IconCopy, 
+  IconMessage, 
+  IconSend, 
+  IconTrash, 
+  IconPlus, 
+  IconDotsVertical, 
+  IconPencil, 
+  IconHistory, 
+  IconChevronLeft
+} from "@tabler/icons-react";
+import { useUserStore } from '../stores/userStore';
+import { fetch } from '@tauri-apps/plugin-http';
 
 const AI_MODELS = [
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5' },
@@ -28,16 +45,36 @@ const AI_MODELS = [
 
 export default function ChatHistoryPanel() {
   const { isDark } = useThemeStore();
-  const { messages, clearHistory, addMessage } = useChatHistoryStore();
+  const { 
+    messages, 
+    clearHistory, 
+    addMessage, 
+    currentSessionId, 
+    setSessionId,
+    sessions, 
+    activeChatSessionId,
+    createSession,
+    deleteSession,
+    renameSession,
+    setActiveSession
+  } = useChatHistoryStore();
+  const { token } = useUserStore();
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [inputText, setInputText] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [openedMessageId, setOpenedMessageId] = useState<string | null>(null);
   const [modalContent, setModalContent] = useState('');
+  
+  const [drawerOpened, setDrawerOpened] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
+  
+  const activeSession = sessions.find(s => s.id === activeChatSessionId);
 
   const colors = {
     border: isDark ? '#2C2E33' : '#e9ecef',
@@ -50,7 +87,6 @@ export default function ChatHistoryPanel() {
     aiBubble: isDark ? '#2C2E33' : '#f1f3f5',
   };
 
-  // 自动滚动到底部
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -61,23 +97,64 @@ export default function ChatHistoryPanel() {
     scrollToBottom();
   }, [messages]);
 
-  const formatTime = (date: Date) => {
-    return new Intl.DateTimeFormat('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+  useEffect(() => {
+    if (sessions.length === 0) {
+      createSession();
+    } else if (!activeChatSessionId) {
+      setActiveSession(sessions[sessions.length - 1].id);
+    }
+  }, [sessions, activeChatSessionId, createSession, setActiveSession]);
+
+  const formatTime = (date: Date | string | number | null | undefined) => {
+    try {
+      if (!date) return '未知时间';
+      
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // 检查日期是否有效
+      if (isNaN(dateObj.getTime())) {
+        return '未知时间';
+      }
+      
+      return new Intl.DateTimeFormat('zh-CN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObj);
+    } catch (error) {
+      console.error('时间格式化错误:', error);
+      return '未知时间';
+    }
   };
 
-  // 处理消息点击
+  const formatDate = (date: Date | string | number | null | undefined) => {
+    try {
+      if (!date) return '未知时间';
+      
+      const dateObj = date instanceof Date ? date : new Date(date);
+      
+      // 检查日期是否有效
+      if (isNaN(dateObj.getTime())) {
+        return '未知时间';
+      }
+      
+      return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      }).format(dateObj);
+    } catch (error) {
+      console.error('日期格式化错误:', error);
+      return '未知时间';
+    }
+  };
+
   const handleMessageClick = (message: any, content: string) => {
     setModalContent(content);
     setOpenedMessageId(message.id);
   };
 
-  // 判断是否需要省略
   const shouldTruncate = (text: string) => text && text.length > 300;
 
-  // 获取省略后的文本
   const getTruncatedText = (text: string) => {
     if (!text) return '';
     if (shouldTruncate(text)) {
@@ -86,35 +163,118 @@ export default function ChatHistoryPanel() {
     return text;
   };
 
-  // 模拟AI回复
-  /*@ts-ignore*/
+  const getSessionPreview = (session: any) => {
+    if (!session.messages || session.messages.length === 0) {
+      return '无对话内容';
+    }
+    
+    const lastMessage = session.messages[session.messages.length - 1];
+    return getTruncatedText(lastMessage.content).slice(0, 50);
+  };
+
+  const handleRenameSession = () => {
+    if (!editingSessionId || !newSessionTitle.trim()) return;
+    
+    renameSession(editingSessionId, newSessionTitle.trim());
+    setEditingSessionId(null);
+    setNewSessionTitle('');
+  };
+
   const simulateAIResponse = async (userMessage: string) => {
     setIsThinking(true);
+    setError(null);
+    
+    const fetchWithTimeout = async (url: string, options: any, timeout = 30000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+      } catch (error) {
+        clearTimeout(id);
+        throw error;
+      }
+    };
     
     try {
-      // 随机等待1-3秒
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      if (!token) {
+        throw new Error('请先登录后再使用AI对话功能');
+      }
       
-      // 模拟的回复内容
-      const responses = [
-        "我已经分析了您提供的日志内容。这看起来是一个常见的问题，建议检查系统配置。",
-        "根据日志显示，这可能是网络连接问题导致的。建议检查网络状态和防火墙设置。",
-        "从日志来看，似乎是应用程序在高负载情况下的性能问题。建议优化相关代码或增加资源配置。",
-        "这个错误日志表明可能存在内存泄漏。建议检查相关组件的资源释放情况。",
-        "日志中显示的错误模式比较典型，可能是配置文件的权限问题导致的。"
-      ];
+      const requestBody: any = {
+        application: "xai",
+        message: userMessage
+      };
       
-      const response = responses[Math.floor(Math.random() * responses.length)];
+      if (currentSessionId) {
+        requestBody.session_id = currentSessionId;
+        console.log('使用现有会话ID:', currentSessionId);
+      } else {
+        console.log('创建新会话');
+      }
       
-      // 添加AI回复
+      const response = await fetchWithTimeout(
+        'https://myllm.ai-ia.cc/api/chat/completions', 
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(requestBody)
+        },
+        30000
+      );
+
+      const data = await response.json();
+      console.log('AI响应数据:', data);
+      
+      if (response.ok && data.message) {
+        if (!currentSessionId && data.session_id) {
+          console.log('保存新会话ID:', data.session_id);
+          setSessionId(data.session_id);
+        }
+        
+        addMessage({
+          id: Date.now().toString(),
+          content: data.message,
+          timestamp: new Date(),
+          role: 'assistant',
+          metadata: {
+            model: data.model,
+            sessionId: data.session_id,
+            usage: data.usage
+          }
+        });
+      } else {
+        throw new Error(data.message || '请求失败');
+      }
+    } catch (error) {
+      console.error('调用AI API出错:', error);
+      
+      let errorMessage = '连接服务器失败';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = '请求超时，请稍后再试';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+      
       addMessage({
         id: Date.now().toString(),
-        content: response,
+        content: `请求失败: ${errorMessage}`,
         timestamp: new Date(),
         role: 'assistant'
       });
-    } catch (error) {
-      console.error('Error in AI response:', error);
     } finally {
       setIsThinking(false);
     }
@@ -124,7 +284,6 @@ export default function ChatHistoryPanel() {
     if (!inputText.trim() || isThinking) return;
     
     try {
-      // 添加用户消息
       addMessage({
         id: Date.now().toString(),
         content: inputText.trim(),
@@ -136,7 +295,6 @@ export default function ChatHistoryPanel() {
       
       setIsLoading(true);
       
-      // 触发AI回复
       await simulateAIResponse(inputText.trim());
       setIsLoading(false);
     } catch (error) {
@@ -146,15 +304,12 @@ export default function ChatHistoryPanel() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // 如果正在输入法编辑，不处理任何快捷键
     if (isComposing) return;
 
     if (e.key === 'Enter') {
       if (e.shiftKey) {
-        // Shift+Enter 换行，保持默认行为
         return;
       } else {
-        // Enter 发送消息
         e.preventDefault();
         handleSubmit();
       }
@@ -163,7 +318,6 @@ export default function ChatHistoryPanel() {
 
   return (
     <Stack gap={0} h="100%" style={{width: '100%'}}>
-      {/* 顶部标题栏 */}
       <Group 
         justify="space-between" 
         px="md" 
@@ -180,24 +334,58 @@ export default function ChatHistoryPanel() {
         <Group gap="xs">
           <IconMessage size={18} style={{ color: '#228be6' }} />
           <Text fw={500} size="sm" c={colors.text}>
-            AI 助手
+            AI助手
           </Text>
+          {currentSessionId && (
+            <Text size="xs" c="dimmed" style={{ fontSize: '10px' }}>
+              (会话中)
+            </Text>
+          )}
         </Group>
-        {messages.length > 0 && (
-          <Tooltip label="清空历史记录">
+        <Group gap="xs">
+          <Tooltip label="历史对话">
             <ActionIcon
               variant="subtle"
-              color="red"
+              color="gray"
               size="sm"
-              onClick={() => clearHistory()}
+              onClick={() => setDrawerOpened(true)}
             >
-              <IconTrash size={16} />
+              <IconHistory size={16} />
             </ActionIcon>
           </Tooltip>
-        )}
+          
+          <Tooltip label="新建对话">
+            <ActionIcon
+              variant="subtle"
+              color="blue"
+              size="sm"
+              onClick={() => {
+                createSession();
+                setDrawerOpened(false);
+              }}
+            >
+              <IconPlus size={16} />
+            </ActionIcon>
+          </Tooltip>
+          
+          {messages.length > 0 && (
+            <Tooltip label="清空当前对话">
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                size="sm"
+                onClick={() => {
+                  clearHistory();
+                  console.log('已清空对话历史，重置会话ID');
+                }}
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </Group>
       </Group>
 
-      {/* 消息列表区域 */}
       <ScrollArea 
         h="calc(100vh - 120px)"
         style={{ 
@@ -210,7 +398,6 @@ export default function ChatHistoryPanel() {
         <Stack gap="lg" p="md" style={{ width: '100%' }}>
           {messages.map((chat, index) => (
             <Box key={index} style={{ width: '100%' }}>
-              {/* 如果有选中的文本，显示在消息前面 */}
               {chat.selected && (
                 <Paper
                   p="xs"
@@ -233,7 +420,6 @@ export default function ChatHistoryPanel() {
                 </Paper>
               )}
 
-              {/* 消息内容 */}
               <Paper
                 p="xs"
                 style={{
@@ -253,7 +439,6 @@ export default function ChatHistoryPanel() {
                 </Text>
               </Paper>
               
-              {/* 时间戳 */}
               <Text 
                 size="xs" 
                 c="dimmed" 
@@ -267,7 +452,6 @@ export default function ChatHistoryPanel() {
             </Box>
           ))}
           
-          {/* 加载动画 */}
           {isLoading && (
             <Box style={{ 
               width: '100%',
@@ -281,11 +465,133 @@ export default function ChatHistoryPanel() {
               <Text size="sm" c="dimmed">AI思考中...</Text>
             </Box>
           )}
+          
+          {error && (
+            <Text c="red" size="sm" ta="center" py="xs">
+              {error}
+            </Text>
+          )}
           <div ref={messagesEndRef} />
         </Stack>
       </ScrollArea>
 
-      {/* 消息详情弹窗 */}
+      <Drawer
+        opened={drawerOpened}
+        onClose={() => {
+          setDrawerOpened(false);
+          setEditingSessionId(null);
+          setNewSessionTitle('');
+        }}
+        title="历史对话"
+        position="right"
+        overlayProps={{ backgroundOpacity: 0.5, blur: 4 }}
+        size="md"
+      >
+        <Stack>
+          <Button
+            variant="light"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => {
+              createSession();
+              setDrawerOpened(false);
+            }}
+            fullWidth
+            mb="md"
+          >
+            新对话
+          </Button>
+          
+          <Divider label="历史记录" labelPosition="center" />
+          
+          <ScrollArea h="calc(100vh - 200px)" offsetScrollbars>
+            <Stack gap="xs">
+              {sessions.length === 0 ? (
+                <Text ta="center" c="dimmed" py="xl">暂无对话历史</Text>
+              ) : (
+                sessions.map((session) => (
+                  <Box 
+                    key={session.id}
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: '8px',
+                      border: `1px solid ${session.id === activeChatSessionId ? '#228be6' : colors.border}`,
+                      backgroundColor: session.id === activeChatSessionId ? (isDark ? '#1C2333' : '#E6F7FF') : colors.cardBg,
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {editingSessionId === session.id ? (
+                      <Group p="xs" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                        <TextInput
+                          value={newSessionTitle}
+                          onChange={(e) => setNewSessionTitle(e.currentTarget.value)}
+                          placeholder="AI助手"
+                          autoFocus
+                          style={{ flex: 1 }}
+                        />
+                        <Button size="xs" onClick={handleRenameSession}>保存</Button>
+                        <Button 
+                          size="xs" 
+                          variant="subtle" 
+                          onClick={() => {
+                            setEditingSessionId(null);
+                            setNewSessionTitle('');
+                          }}
+                        >
+                          取消
+                        </Button>
+                      </Group>
+                    ) : (
+                      <Group 
+                        p="xs" 
+                        style={{ 
+                          borderBottom: `1px solid ${colors.border}`,
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        <Text size="sm" fw={500} c={session.id === activeChatSessionId ? '#228be6' : colors.text}>
+                          AI助手
+                        </Text>
+                        <Group gap="xs">
+                          <Text size="xs" c="dimmed">
+                            {formatDate(session.updatedAt)}
+                          </Text>
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            size="xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              try {
+                                deleteSession(session.id);
+                              } catch (err) {
+                                console.error('删除会话失败:', err);
+                              }
+                            }}
+                          >
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Group>
+                      </Group>
+                    )}
+                    <Box 
+                      p="xs"
+                      onClick={() => {
+                        setActiveSession(session.id);
+                        setDrawerOpened(false);
+                      }}
+                    >
+                      <Text size="xs" lineClamp={2} c={session.id === activeChatSessionId ? undefined : 'dimmed'}>
+                        {getSessionPreview(session)}
+                      </Text>
+                    </Box>
+                  </Box>
+                ))
+              )}
+            </Stack>
+          </ScrollArea>
+        </Stack>
+      </Drawer>
+
       <Modal
         opened={openedMessageId !== null}
         onClose={() => setOpenedMessageId(null)}
@@ -331,9 +637,7 @@ export default function ChatHistoryPanel() {
         </Stack>
       </Modal>
 
-      {/* 底部输入区域 */}
       <Box>
-        {/* 输入框区域 */}
         <Box
           style={{
             backgroundColor: colors.cardBg,
@@ -399,7 +703,6 @@ export default function ChatHistoryPanel() {
               </Tooltip>
             </Group>
 
-            {/* 模型选择和MCP开关 */}
             <Group justify="flex-start" gap="xs" style={{ marginLeft: 4, marginTop: -1 }}>
               <Select
                 size="xs"
